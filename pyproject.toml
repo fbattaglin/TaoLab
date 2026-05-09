@@ -1,0 +1,45 @@
+[project]
+name = "tao-lab"
+version = "0.1.0"
+description = "A statistically rigorous experimentation platform for data scientists."
+requires-python = ">=3.12"
+authors = [{ name = "Gemini CLI" }]
+dependencies = [
+    "streamlit>=1.30.0",
+    "streamlit-shadcn-ui>=0.1.18",
+    "polars>=0.20.0",
+    "pandas>=2.0.0",
+    "numpy>=1.26.0",
+    "scipy>=1.11.0",
+    "statsmodels>=0.14.0",
+    "pingouin>=0.5.3",
+    "plotly>=5.18.0",
+    "altair>=5.2.0",
+    "pydantic>=2.5.0",
+    "pyyaml>=6.0.1",
+    "httpx>=0.25.0",
+    "anthropic>=0.8.0",
+    "numpyro>=0.13.0",
+    "jax>=0.4.20",
+    "jaxlib>=0.4.20",
+    "dowhy>=0.11",
+    "econml>=0.14.0",
+    "causalml>=0.14.0",
+    "causalpy>=0.2.0",
+    "pyfixest>=0.10.0",
+    "mabwiser>=1.11.0",
+    "networkx==2.8.8",
+]
+
+[project.optional-dependencies]
+report = [
+    "weasyprint>=60.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tao_lab*"]

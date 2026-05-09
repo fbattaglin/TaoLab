@@ -1,0 +1,359 @@
+"""Step 3 — Configure.
+
+Phase D update:
+* Reads ``config_hint`` from the *selected* candidate (not always the
+  top-ranked one), so the form adapts when the user overrides the method.
+* Time-Series form handles string-typed date columns by casting via the
+  ``date_format`` stored in the candidate's ``config_hint``.
+"""
+
+from __future__ import annotations
+
+import pandas as pd
+import polars as pl
+import streamlit as st
+
+from tao_lab.methods.base import ExperimentConfig
+from tao_lab.ui import state as wstate
+from tao_lab.ui.components.explainer import explainer_drawer, helper_caption
+from tao_lab.ui.components.metric_picker import render_metric_picker
+from tao_lab.ui.components.variant_setup import render_variant_setup
+from tao_lab.ui.strings import copy
+
+
+def render() -> None:
+    s = wstate.get_state()
+    if s.df is None or s.diagnosis is None:
+        st.info("Complete previous steps first.")
+        return
+
+    method = s.chosen_method or s.diagnosis.suggested_method
+    s.chosen_method = method
+
+    # ── Read config_hint from the selected candidate ──
+    candidates = s.diagnosis.candidates
+    idx = s.selected_candidate_idx
+    if idx < len(candidates):
+        hint = candidates[idx].config_hint
+    else:
+        hint = s.diagnosis.config_hint
+
+    if method == "A/B Test":
+        _render_ab_form(s, hint)
+    elif method == "Time-Series Intervention":
+        _render_timeseries_form(s, hint)
+    elif method == "Causal Inference":
+        _render_causal_form(s, hint)
+    else:
+        st.warning(
+            f"The selected method '{method}' is not yet fully implemented."
+        )
+
+    st.markdown("<hr class='tl-divider'>", unsafe_allow_html=True)
+    if st.button("← Back", key="cfg_back"):
+        wstate.go_back()
+
+
+# ───────────────────────── A/B Test ─────────────────────────
+def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
+    df = s.df
+    voice = s.voice
+
+    _eyebrow(copy.step3_variant_eyebrow(voice))
+    assignment_col, control_val, treatment_val = render_variant_setup(
+        df,
+        default_assignment=hint.get("assignment_col", df.columns[0]),
+        default_control=hint.get("control_val", "control"),
+        default_treatment=hint.get("treatment_val", "treatment"),
+    )
+
+    st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
+    _eyebrow(copy.step3_metrics_eyebrow(voice))
+    metric_cols, ratio_metrics = render_metric_picker(
+        df,
+        default_metrics=hint.get("metric_cols", []),
+        default_ratios=hint.get("ratio_metrics", []),
+    )
+
+    st.markdown("<div style='height:1.25rem'></div>", unsafe_allow_html=True)
+
+    with st.expander(copy.step3_advanced_label(voice), expanded=False):
+        col_left, col_right = st.columns(2)
+        with col_left:
+            engine = st.selectbox(
+                "Statistical engine",
+                ["Frequentist", "Bayesian (NumPyro)"],
+                help=(
+                    "Frequentist gives p-values and confidence intervals. "
+                    "Bayesian gives the posterior probability the treatment is better."
+                ),
+            )
+            helper_caption(
+                "Frequentist is faster and the default expectation in most teams. "
+                "Bayesian is richer but slower."
+            )
+            explainer_drawer("frequentist_vs_bayesian")
+
+        with col_right:
+            alpha = st.slider(
+                "Significance threshold (α)",
+                min_value=0.01,
+                max_value=0.20,
+                value=0.05,
+                step=0.01,
+                help="The false-positive rate you're willing to accept.",
+            )
+            helper_caption(
+                "Default 0.05 means we accept a 5% chance of declaring a 'win' that "
+                "isn't really there. Lower α = stricter."
+            )
+            explainer_drawer("alpha")
+
+        expected_ratio_c = st.slider(
+            "Expected control proportion (used for SRM check)",
+            min_value=0.1,
+            max_value=0.9,
+            value=0.5,
+            step=0.05,
+            help="The split you intended at randomisation, e.g. 0.5 for a 50/50 test.",
+        )
+        helper_caption(
+            "If observed split differs strongly from this, we'll flag a Sample Ratio "
+            "Mismatch — usually a sign of an assignment or logging bug."
+        )
+        explainer_drawer("srm")
+
+    st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
+    if st.button(
+        copy.step3_run(voice), type="primary", key="ab_run", use_container_width=False
+    ):
+        s.config = ExperimentConfig(
+            assignment_col=assignment_col,
+            control_val=control_val,
+            treatment_val=treatment_val,
+            metric_cols=metric_cols,
+            ratio_metrics=ratio_metrics,
+            alpha=alpha,
+            expected_ratio={
+                control_val: expected_ratio_c,
+                treatment_val: 1.0 - expected_ratio_c,
+            },
+        )
+        s.engine = engine
+        wstate.advance()
+
+
+# ───────────────────────── Time-Series ─────────────────────────
+def _render_timeseries_form(s: wstate.WizardState, hint: dict) -> None:
+    df = s.df
+    voice = s.voice
+
+    _eyebrow("Series and intervention")
+    helper_caption(
+        "Pick the timestamp column and the metric you want to evaluate. "
+        "We'll fit a counterfactual to the pre-intervention period and contrast "
+        "it with what actually happened after."
+    )
+
+    # ── Detect date format from diagnosis (handles string dates) ──
+    date_format = hint.get("date_format")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        default_ts_col = hint.get("timestamp_col", df.columns[0])
+        ts_col_idx = df.columns.index(default_ts_col) if default_ts_col in df.columns else 0
+        timestamp_col = st.selectbox(
+            "Timestamp column",
+            df.columns,
+            index=ts_col_idx,
+        )
+
+        default_metrics = hint.get("metrics", [])
+        metric_options = [c for c in df.columns if c != timestamp_col]
+        default_metric = default_metrics[0] if default_metrics else (metric_options[0] if metric_options else "")
+        metric_col = st.selectbox(
+            "Outcome metric",
+            metric_options,
+            index=metric_options.index(default_metric) if default_metric in metric_options else 0,
+        )
+
+    # ── Parse the timestamp column to get min/max and observation count ──
+    ts_series = df[timestamp_col]
+    ts_parsed = None
+    if ts_series.dtype == pl.Utf8:
+        fmt = date_format or "%Y-%m-%d"
+        try:
+            ts_parsed = ts_series.str.to_date(fmt, strict=False).drop_nulls()
+        except Exception:  # noqa: BLE001
+            pass
+    elif ts_series.dtype in (pl.Date, pl.Datetime):
+        ts_parsed = ts_series.drop_nulls()
+
+    min_date = ts_parsed.min() if ts_parsed is not None else None
+    max_date = ts_parsed.max() if ts_parsed is not None else None
+    n_obs = ts_parsed.len() if ts_parsed is not None else 0
+
+    with c2:
+        if min_date is not None and max_date is not None:
+            min_d = min_date.date() if hasattr(min_date, "date") else min_date
+            max_d = max_date.date() if hasattr(max_date, "date") else max_date
+            span_days = (max_d - min_d).days
+
+            # ── Data range summary ──
+            st.markdown(
+                f"""<div class="tl-card" style="padding:.8rem 1rem;margin-bottom:.75rem;">
+                  <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;
+                              color:var(--tl-tangerine);font-weight:600;margin-bottom:.4rem;">
+                    Available range
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                    <span style="font-size:.9rem;font-weight:500;color:var(--tl-indigo-deep);">
+                      {min_d.strftime('%b %d, %Y')}
+                    </span>
+                    <span style="font-size:.75rem;color:var(--tl-slate);">→</span>
+                    <span style="font-size:.9rem;font-weight:500;color:var(--tl-indigo-deep);">
+                      {max_d.strftime('%b %d, %Y')}
+                    </span>
+                  </div>
+                  <div style="font-size:.8rem;color:var(--tl-slate);margin-top:.3rem;">
+                    {n_obs} observations · {span_days} days
+                  </div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+
+            midpoint = min_d + (max_d - min_d) / 2
+            intervention_date = st.date_input(
+                "Intervention date",
+                value=midpoint,
+                min_value=min_d,
+                max_value=max_d,
+                help="Select the date when the change went live. Only dates within your data range are allowed.",
+            )
+
+            # ── Live pre/post split preview ──
+            if ts_parsed is not None:
+                import datetime as _dt
+                if isinstance(intervention_date, _dt.date):
+                    n_pre = int((ts_parsed < intervention_date).sum())
+                    n_post = n_obs - n_pre
+                    pct_pre = n_pre / n_obs * 100 if n_obs > 0 else 0
+                    pct_post = n_post / n_obs * 100 if n_obs > 0 else 0
+
+                    # Visual split bar
+                    st.markdown(
+                        f"""<div style="margin-top:.5rem;">
+                          <div style="font-size:.8rem;color:var(--tl-slate);margin-bottom:.3rem;">
+                            Pre / Post split
+                          </div>
+                          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
+                            <div style="width:{pct_pre:.1f}%;background:var(--tl-indigo-deep);"></div>
+                            <div style="width:{pct_post:.1f}%;background:var(--tl-tangerine);"></div>
+                          </div>
+                          <div style="display:flex;justify-content:space-between;margin-top:.25rem;">
+                            <span style="font-size:.8rem;color:var(--tl-indigo-deep);font-weight:500;">
+                              Pre: {n_pre} obs
+                            </span>
+                            <span style="font-size:.8rem;color:var(--tl-tangerine);font-weight:500;">
+                              Post: {n_post} obs
+                            </span>
+                          </div>
+                        </div>""",
+                        unsafe_allow_html=True,
+                    )
+
+                    if n_pre < 10:
+                        st.warning(
+                            f"Only {n_pre} pre-intervention observations. "
+                            "The counterfactual estimate may be unreliable — "
+                            "consider choosing an earlier intervention date."
+                        )
+                    if n_post < 5:
+                        st.warning(
+                            f"Only {n_post} post-intervention observations. "
+                            "Very few data points to measure the effect."
+                        )
+        else:
+            st.info("Could not parse dates from the selected column. Enter the intervention date manually.")
+            intervention_date = st.date_input(
+                "Intervention date",
+                help="The date when the change or intervention went live.",
+            )
+
+    if st.button(copy.step3_run(voice), type="primary", key="ts_run"):
+        method_params = {
+            "timestamp_col": timestamp_col,
+            "intervention_date": pd.Timestamp(intervention_date),
+        }
+        if date_format:
+            method_params["date_format"] = date_format
+
+        s.config = ExperimentConfig(
+            assignment_col="",
+            control_val="",
+            treatment_val="",
+            metric_cols=[metric_col],
+            method_params=method_params,
+        )
+        wstate.advance()
+
+
+# ───────────────────────── Causal Inference ─────────────────────────
+def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
+    df = s.df
+    voice = s.voice
+
+    _eyebrow("Treatment, outcome, and confounders")
+    helper_caption(
+        "Causal inference recovers a causal effect from observational data — "
+        "but only under the assumption that you've measured every confounder. "
+        "Be deliberate about which columns you list."
+    )
+
+    c1, c2 = st.columns(2)
+    with c1:
+        default_treatment = hint.get("assignment_col", df.columns[0])
+        treat_idx = df.columns.index(default_treatment) if default_treatment in df.columns else 0
+        treatment_col = st.selectbox(
+            "Treatment column",
+            df.columns,
+            index=treat_idx,
+        )
+
+        default_outcomes = hint.get("metrics", [])
+        outcome_options = [c for c in df.columns if c != treatment_col]
+        default_outcome = default_outcomes[0] if default_outcomes else (outcome_options[0] if outcome_options else "")
+        outcome_col = st.selectbox(
+            "Outcome metric",
+            outcome_options,
+            index=outcome_options.index(default_outcome) if default_outcome in outcome_options else 0,
+        )
+
+    with c2:
+        default_covariates = hint.get("covariates", [])
+        available_covariates = [c for c in df.columns if c not in [treatment_col, outcome_col]]
+        covariates = st.multiselect(
+            "Confounders (W)",
+            available_covariates,
+            default=[c for c in default_covariates if c in available_covariates],
+            help="Variables that plausibly affect both treatment and outcome.",
+        )
+
+    if st.button(copy.step3_run(voice), type="primary", key="ci_run"):
+        s.config = ExperimentConfig(
+            assignment_col=treatment_col,
+            control_val="",
+            treatment_val="",
+            metric_cols=[outcome_col],
+            covariate_cols=covariates,
+        )
+        wstate.advance()
+
+
+# ───────────────────────── helpers ─────────────────────────
+def _eyebrow(text: str) -> None:
+    st.markdown(
+        f"<div style='font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;"
+        f"color:var(--tl-tangerine);font-weight:600;margin-bottom:.5rem;'>{text}</div>",
+        unsafe_allow_html=True,
+    )

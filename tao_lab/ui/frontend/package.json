@@ -1,0 +1,28 @@
+{
+  "name": "taolab-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Custom React components for Tao Lab v2 (Stepper, VerdictBanner, PrescriptionCard).",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build && node scripts/post-build.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.454.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "streamlit-component-lib": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  }
+}

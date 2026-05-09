@@ -84,8 +84,9 @@ def render() -> None:
             key="diag_continue",
         ):
             s.chosen_method = selected_candidate.method
-            # Clear any config from a previous pass so Step 3 re-renders
+            # Clear everything from previous passes
             s.config = None
+            s.clear_results()
             wstate.advance()
 
 

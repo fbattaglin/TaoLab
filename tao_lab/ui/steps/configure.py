@@ -369,6 +369,7 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             )
 
     if st.button(copy.step3_run(voice), type="primary", key="ci_run"):
+        s.clear_results()
         s.config = ExperimentConfig(
             assignment_col=treatment_col,
             control_val="",

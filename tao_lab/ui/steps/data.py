@@ -68,74 +68,84 @@ def render() -> None:
 
 # ─────────────────────── Empty / hero state ───────────────────────
 def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
-    # ── Centred brand mark ──
-    _gap, logo_col, _gap2 = st.columns([2, 1, 2])
-    with logo_col:
+    st.markdown("<div style='height:2rem'></div>", unsafe_allow_html=True)
+    
+    left_col, right_col = st.columns([1.1, 1], gap="large")
+    
+    with left_col:
+        st.markdown(
+            f"""
+            <div style="padding: 1rem 0 2rem 0; text-align: left;">
+              <h1 style="margin:0; font-size: 2.75rem; line-height: 1.15; letter-spacing: -0.02em;">
+                {copy.step1_hero_headline(voice)}
+              </h1>
+              <p style="color:var(--tl-slate); font-size: 1.15rem; max-width: 45ch; margin-top: 1rem; line-height: 1.5;">
+                {copy.step1_hero_sub(voice)}
+              </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # ── Business-context primer ──
+        question = st.text_input(
+            copy.step1_question_label(voice),
+            value=s.business_question or "",
+            placeholder="e.g. Did the new checkout design increase revenue?",
+            key="biz_question_input",
+        )
+        if question != (s.business_question or ""):
+            s.business_question = question if question.strip() else None
+
+        st.markdown("<div style='height:.75rem'></div>", unsafe_allow_html=True)
+
+        uploaded = st.file_uploader(
+            copy.step1_drop_label(voice),
+            type=["csv", "xlsx"],
+            label_visibility="visible",
+        )
+
+        if uploaded is not None:
+            df = _read_uploaded_file(uploaded)
+            if df is not None:
+                s.df = df
+                s.file_name = uploaded.name
+                s.diagnosis = None  # invalidate downstream state on new upload
+                st.rerun()
+
+        st.markdown(
+            f"<div style='margin:2.5rem 0 1rem; color:var(--tl-slate); font-weight: 500; font-size: 0.95rem;'>"
+            f"{copy.step1_samples_label(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+
+        chip_cols = st.columns(len(_SAMPLE_CHIPS))
+        for slot, chip in zip(chip_cols, _SAMPLE_CHIPS):
+            blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]
+            with slot:
+                if st.button(
+                    chip["label"],
+                    key=f"sample_chip_{chip['key']}",
+                    use_container_width=True,
+                ):
+                    _load_sample(s, chip["file"])
+                    st.rerun()
+                st.markdown(
+                    f"<div style='color:var(--tl-slate);font-size:.8rem;"
+                    f"line-height:1.4;margin-top:-6px;'>{blurb}</div>",
+                    unsafe_allow_html=True,
+                )
+
+    with right_col:
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: center; align-items: center; height: 100%; padding: 2rem;">
+            """,
+            unsafe_allow_html=True,
+        )
         if _LOGO.exists():
             st.image(str(_LOGO), use_container_width=True)
-
-    st.markdown(
-        f"""
-        <div class="tl-hero-wash" style="text-align:center;">
-          <h1 style="margin:0 auto;max-width:24ch;">{copy.step1_hero_headline(voice)}</h1>
-          <p style="color:var(--tl-slate);max-width:50ch;margin:.75rem auto 0;">
-            {copy.step1_hero_sub(voice)}
-          </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
-
-    # ── Business-context primer ──
-    question = st.text_input(
-        copy.step1_question_label(voice),
-        value=s.business_question or "",
-        placeholder="e.g. Did the new checkout design increase revenue?",
-        key="biz_question_input",
-    )
-    if question != (s.business_question or ""):
-        s.business_question = question if question.strip() else None
-
-    st.markdown("<div style='height:.75rem'></div>", unsafe_allow_html=True)
-
-    uploaded = st.file_uploader(
-        copy.step1_drop_label(voice),
-        type=["csv", "xlsx"],
-        label_visibility="collapsed",
-    )
-
-    if uploaded is not None:
-        df = _read_uploaded_file(uploaded)
-        if df is not None:
-            s.df = df
-            s.file_name = uploaded.name
-            s.diagnosis = None  # invalidate downstream state on new upload
-            st.rerun()
-
-    st.markdown(
-        f"<div style='margin:1.5rem 0 .5rem;color:var(--tl-slate);'>"
-        f"{copy.step1_samples_label(voice)}</div>",
-        unsafe_allow_html=True,
-    )
-
-    chip_cols = st.columns(len(_SAMPLE_CHIPS))
-    for slot, chip in zip(chip_cols, _SAMPLE_CHIPS):
-        blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]
-        with slot:
-            if st.button(
-                chip["label"],
-                key=f"sample_chip_{chip['key']}",
-                use_container_width=True,
-            ):
-                _load_sample(s, chip["file"])
-                st.rerun()
-            st.markdown(
-                f"<div style='color:var(--tl-slate);font-size:.8rem;"
-                f"line-height:1.4;margin-top:-6px;'>{blurb}</div>",
-                unsafe_allow_html=True,
-            )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 
 def _read_uploaded_file(uploaded) -> pl.DataFrame | None:

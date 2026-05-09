@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 /*
  * Tao Lab v2 — Global stylesheet (Forced Light Mode).
  * Tokens kept in sync with tao_lab/ui/theme.py and frontend/tailwind.config.js.
@@ -24,7 +26,7 @@
   --tl-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04);
   --tl-shadow-lifted: 0 4px 12px rgba(15, 23, 42, 0.06);
 
-  --tl-font-sans: -apple-system, "Inter", "Söhne", system-ui, sans-serif;
+  --tl-font-sans: "Outfit", -apple-system, "Inter", "Söhne", system-ui, sans-serif;
   --tl-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
   --tl-max-content: 960px;

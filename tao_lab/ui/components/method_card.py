@@ -1,8 +1,7 @@
 """Selectable method cards for the Diagnose step.
 
-Phase D replaces the single hero card + static table with ranked, clickable
-cards.  The user sees all eligible methods scored by the diagnosis engine and
-can override the recommendation before advancing to Configure.
+Phase D: ranked, clickable cards.
+Phase 4: voice-aware blurbs + assumption surfacing.
 """
 
 from __future__ import annotations
@@ -12,34 +11,7 @@ from typing import List, Optional
 import streamlit as st
 
 from tao_lab.diagnose.engine import MethodCandidate
-from tao_lab.ui.strings import Voice, copy
-
-
-_METHOD_BLURBS = {
-    "A/B Test": (
-        "A/B Test",
-        "Two groups, randomised. We compare averages with Welch's t-test "
-        "(robust to unequal variances) and apply the Delta Method for ratio "
-        "metrics so confidence intervals stay valid.",
-    ),
-    "Time-Series Intervention": (
-        "Time-Series Intervention",
-        "A single series with a known intervention date. We fit a "
-        "counterfactual to the pre-period, then compare it against the "
-        "observed post-period.",
-    ),
-    "Causal Inference": (
-        "Observational Causal Inference",
-        "No randomisation, but treatment, outcome, and plausible "
-        "confounders are all observed. We use DoWhy to identify a valid "
-        "estimand and EconML's Double Machine Learning to estimate it.",
-    ),
-    "Exploratory": (
-        "Exploratory mode",
-        "We can't infer a clear experimental structure. Surface distributions "
-        "and correlations to understand the data before designing a test.",
-    ),
-}
+from tao_lab.ui.strings import METHOD_BLURBS, Voice, copy
 
 
 def render_method_selector(
@@ -86,9 +58,13 @@ def render_method_selector(
 
         score_pct = int(candidate.score * 100)
 
-        # ── Display name ──
-        display_name, _default_blurb = _METHOD_BLURBS.get(
-            candidate.method, (candidate.method, "")
+        # ── Display name + voice-aware blurb ──
+        blurb = METHOD_BLURBS.get(candidate.method)
+        display_name = blurb.display_name if blurb else candidate.method
+        description = (blurb.plain if voice == "plain" else blurb.technical) if blurb else ""
+        assumptions = (
+            (blurb.assumptions_plain if voice == "plain" else blurb.assumptions_technical)
+            if blurb else ""
         )
 
         # ── Border style ──
@@ -106,8 +82,18 @@ def render_method_selector(
             req_label = copy.step2_requirements_label(voice)
             reqs = " · ".join(candidate.requirements)
             req_html = (
-                f"<div style='font-size:.8rem;color:var(--tl-slate);margin-top:.5rem;'>"
+                f"<div class='tl-text-slate' style='font-size:.8rem;margin-top:.5rem;'>"
                 f"<span style='font-weight:600;'>{req_label}:</span> {reqs}</div>"
+            )
+
+        # ── Assumptions line ──
+        assume_html = ""
+        if assumptions:
+            assume_html = (
+                f"<div class='tl-text-slate' style='font-size:.82rem;margin-top:.5rem;"
+                f"border-left:2px solid var(--tl-hairline);padding-left:.75rem;"
+                f"font-style:italic;line-height:1.4;'>"
+                f"{assumptions}</div>"
             )
 
         card_html = f"""
@@ -132,12 +118,16 @@ def render_method_selector(
             </div>
             <span style="font-size:1.1rem;color:{radio_color};">{radio}</span>
           </div>
-          <h3 style="margin:.4rem 0 .5rem;color:var(--tl-indigo-deep);font-size:1.15rem;">
+          <h3 class="tl-card-title">
             {display_name}
           </h3>
-          <p style="color:var(--tl-indigo-ink);font-size:.9rem;line-height:1.5;margin:0;max-width:70ch;">
+          <p class="tl-text-ink" style="font-size:.9rem;line-height:1.5;margin:0 0 .3rem;max-width:70ch;">
+            {description}
+          </p>
+          <p class="tl-text-slate" style="font-size:.85rem;line-height:1.45;margin:0;max-width:70ch;">
             {candidate.rationale}
           </p>
+          {assume_html}
           {req_html}
         </div>
         """
@@ -160,7 +150,9 @@ def render_method_selector(
 
 def render_method_card(method_name: str, rationale: str, *, voice: Voice = "plain") -> None:
     """Legacy single-card render. Delegates to a minimal card display."""
-    title, default_blurb = _METHOD_BLURBS.get(method_name, (method_name, rationale))
+    blurb_entry = METHOD_BLURBS.get(method_name)
+    title = blurb_entry.display_name if blurb_entry else method_name
+    default_blurb = (blurb_entry.plain if voice == "plain" else blurb_entry.technical) if blurb_entry else rationale
     blurb = rationale or default_blurb
     eyebrow = copy.step2_method_card_eyebrow(voice)
 
@@ -171,8 +163,8 @@ def render_method_card(method_name: str, rationale: str, *, voice: Voice = "plai
                       color:var(--tl-tangerine);font-weight:600;">
             {eyebrow}
           </div>
-          <h2 style="margin:.4rem 0 .8rem;color:var(--tl-indigo-deep);">{title}</h2>
-          <p style="color:var(--tl-indigo-ink);max-width:70ch;line-height:1.6;margin:0;">
+          <h2 class="tl-card-title" style="font-size:1.5rem !important;">{title}</h2>
+          <p class="tl-text-ink" style="max-width:70ch;line-height:1.6;margin:0;">
             {blurb}
           </p>
         </div>

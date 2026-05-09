@@ -36,19 +36,17 @@ def render_prescription(
     """Render the prescription card. Falls back to a Streamlit-only layout if
     the React build artefact is missing — the dev workflow stays usable when
     someone forgets to build the frontend."""
+    from tao_lab.ui.theme import get_theme_variables
+    theme_vars = get_theme_variables()
+
     args = _build_args(narration, voice=voice)
+    args["theme_vars"] = theme_vars
 
     if not (_FRONTEND_DIST / "index.html").exists():
         _render_fallback(args)
         return
     _component(
-        diagnosis=args["diagnosis"],
-        recommendation=args["recommendation"],
-        reasoning=args["reasoning"],
-        confidenceLabel=args["confidenceLabel"],
-        confidenceScore=args["confidenceScore"],
-        caveats=args["caveats"],
-        nextSteps=args["nextSteps"],
+        **args,
         default=None,
         key=key or "taolab_prescription",
     )

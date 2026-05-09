@@ -11,7 +11,7 @@ Every statistical method must inherit from this class.
 ```python
 class Method(ABC):
     @abstractmethod
-    def fit(self, data: pl.DataFrame, config: Dict) -> Result:
+    def fit(self, data: pl.DataFrame, config: Dict) -> AnalysisResult:
         """Execute the statistical analysis."""
         pass
 
@@ -21,7 +21,7 @@ class Method(ABC):
         pass
 
     @abstractmethod
-    def visualize(self) -> List[go.Figure]:
+    def visualize(self, result: AnalysisResult) -> List[go.Figure]:
         """Return a list of plotly figures for the UI."""
         pass
 ```
@@ -35,7 +35,8 @@ class Method(ABC):
 
 ## UI Standards
 - **Semaphore Colors**: 
-    - Success/Safe: `#00C853` (Green)
-    - Warning/Marginal: `#FFD600` (Yellow)
-    - Danger/Invalid: `#D50000` (Red)
+    - Success/Safe: `#059669` (Success Green)
+    - Warning/Marginal: `#D97706` (Warning Amber)
+    - Danger/Invalid: `#DC2626` (Danger Red)
 - **Precision**: 3 significant figures by default.
+- **Theming**: **Forced Light Mode Only**. All CSS variables are defined in `tao_lab/ui/static/style.css` with `!important` to prevent OS-level overrides.

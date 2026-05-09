@@ -40,9 +40,13 @@ def render_stepper(state: WizardState, *, clickable: bool = True) -> Optional[in
     if not (_FRONTEND_DIST / "index.html").exists():
         return _render_fallback(state)
 
+    from tao_lab.ui.theme import get_theme_variables
+    theme_vars = get_theme_variables()
+
     raw = _component(
         steps=steps_status(state),
         clickable=clickable,
+        theme_vars=theme_vars,
         default=None,
         key="taolab_stepper",
     )

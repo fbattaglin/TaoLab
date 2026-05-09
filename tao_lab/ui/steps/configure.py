@@ -15,7 +15,7 @@ import streamlit as st
 
 from tao_lab.methods.base import ExperimentConfig
 from tao_lab.ui import state as wstate
-from tao_lab.ui.components.explainer import explainer_drawer, helper_caption
+from tao_lab.ui.components.explainer import concept_drawer, explainer_drawer, helper_caption
 from tao_lab.ui.components.metric_picker import render_metric_picker
 from tao_lab.ui.components.variant_setup import render_variant_setup
 from tao_lab.ui.strings import copy
@@ -59,12 +59,16 @@ def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
     df = s.df
     voice = s.voice
 
+    # ── Why these settings? ──
+    _render_why_settings(hint, voice)
+
     _eyebrow(copy.step3_variant_eyebrow(voice))
     assignment_col, control_val, treatment_val = render_variant_setup(
         df,
         default_assignment=hint.get("assignment_col", df.columns[0]),
         default_control=hint.get("control_val", "control"),
         default_treatment=hint.get("treatment_val", "treatment"),
+        voice=voice,
     )
 
     st.markdown("<div style='height:1.5rem'></div>", unsafe_allow_html=True)
@@ -73,6 +77,7 @@ def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
         df,
         default_metrics=hint.get("metric_cols", []),
         default_ratios=hint.get("ratio_metrics", []),
+        voice=voice,
     )
 
     st.markdown("<div style='height:1.25rem'></div>", unsafe_allow_html=True)
@@ -121,7 +126,11 @@ def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
             "If observed split differs strongly from this, we'll flag a Sample Ratio "
             "Mismatch — usually a sign of an assignment or logging bug."
         )
-        explainer_drawer("srm")
+        concept_drawer(
+            "srm",
+            use_when="You randomised assignment and want to verify the split is clean.",
+            avoid_when="You're doing observational analysis (no randomisation to check).",
+        )
 
     st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
     if st.button(
@@ -304,11 +313,21 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
     voice = s.voice
 
     _eyebrow("Treatment, outcome, and confounders")
-    helper_caption(
-        "Causal inference recovers a causal effect from observational data — "
-        "but only under the assumption that you've measured every confounder. "
-        "Be deliberate about which columns you list."
-    )
+    if voice == "plain":
+        helper_caption(
+            "Causal inference estimates the effect of a change even when assignment wasn't random "
+            "— but it needs you to include every factor that might affect both who got the treatment "
+            "and the outcome."
+        )
+    else:
+        helper_caption(
+            "Causal inference recovers a causal effect from observational data — "
+            "but only under the assumption that you've measured every confounder. "
+            "Be deliberate about which columns you list."
+        )
+
+    # ── Why these settings? ──
+    _render_why_settings(hint, voice)
 
     c1, c2 = st.columns(2)
     with c1:
@@ -318,7 +337,10 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             "Treatment column",
             df.columns,
             index=treat_idx,
+            help="The column that indicates who received the treatment.",
         )
+        if voice == "plain":
+            helper_caption("The column indicating who received the change (0/1 or similar).")
 
         default_outcomes = hint.get("metrics", [])
         outcome_options = [c for c in df.columns if c != treatment_col]
@@ -327,17 +349,24 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             "Outcome metric",
             outcome_options,
             index=outcome_options.index(default_outcome) if default_outcome in outcome_options else 0,
+            help="The number you want to measure the effect on.",
         )
 
     with c2:
         default_covariates = hint.get("covariates", [])
         available_covariates = [c for c in df.columns if c not in [treatment_col, outcome_col]]
+        confounders_label = "Confounders" if voice == "plain" else "Confounders (W)"
         covariates = st.multiselect(
-            "Confounders (W)",
+            confounders_label,
             available_covariates,
             default=[c for c in default_covariates if c in available_covariates],
             help="Variables that plausibly affect both treatment and outcome.",
         )
+        if voice == "plain":
+            helper_caption(
+                "Factors that might affect both who got the treatment and the outcome. "
+                "Including them helps isolate the true effect of the change."
+            )
 
     if st.button(copy.step3_run(voice), type="primary", key="ci_run"):
         s.config = ExperimentConfig(
@@ -357,3 +386,50 @@ def _eyebrow(text: str) -> None:
         f"color:var(--tl-tangerine);font-weight:600;margin-bottom:.5rem;'>{text}</div>",
         unsafe_allow_html=True,
     )
+
+
+def _render_why_settings(hint: dict, voice: str) -> None:
+    """Collapsible explaining why the form fields are pre-filled."""
+    if not hint:
+        return
+
+    parts = []
+    if hint.get("assignment_col"):
+        col_name = hint["assignment_col"]
+        if voice == "plain":
+            parts.append(
+                f"We detected <strong>{col_name}</strong> as the group column "
+                f"because it has a small number of distinct values."
+            )
+        else:
+            parts.append(
+                f"Assignment column inferred as <code>{col_name}</code> "
+                f"(low cardinality categorical)."
+            )
+
+    if hint.get("metric_cols"):
+        metrics = hint["metric_cols"]
+        if voice == "plain":
+            parts.append(
+                f"We found {len(metrics)} numeric column{'s' if len(metrics) != 1 else ''} "
+                f"that look like outcome metrics: {', '.join(metrics)}."
+            )
+        else:
+            parts.append(
+                f"Candidate metrics: {', '.join(metrics)}."
+            )
+
+    if hint.get("timestamp_col"):
+        if voice == "plain":
+            parts.append(
+                f"We detected <strong>{hint['timestamp_col']}</strong> as a date column."
+            )
+        else:
+            parts.append(f"Timestamp column: <code>{hint['timestamp_col']}</code>.")
+
+    if not parts:
+        return
+
+    with st.expander(copy.step3_why_settings(voice), expanded=False):
+        for p in parts:
+            st.markdown(p, unsafe_allow_html=True)

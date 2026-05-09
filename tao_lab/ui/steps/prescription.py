@@ -26,6 +26,7 @@ from tao_lab.ui.components.forest_plot import render_forest_plot
 from tao_lab.ui.components.metric_detail import render_metric_details
 from tao_lab.ui.components.prescription_card import render_prescription
 from tao_lab.ui.components.verdict_banner import render_verdict
+from tao_lab.ui.strings import copy
 
 
 _CONFIDENCE_LABEL = {
@@ -66,22 +67,24 @@ def render() -> None:
 
     # ── Forest plot ──
     if result.metrics:
+        forest_title = copy.step5_forest_title(voice)
         st.markdown(
-            "<div style='font-weight:500;margin:0 0 .5rem;color:var(--tl-indigo-deep);'>"
-            "Lift overview"
-            "</div>",
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .5rem;'>"
+            f"{forest_title}"
+            f"</div>",
             unsafe_allow_html=True,
         )
         st.plotly_chart(render_forest_plot(result), use_container_width=True)
 
     # ── Per-metric detail rows ──
+    metrics_title = copy.step5_metrics_title(voice)
     st.markdown(
-        "<div style='font-weight:500;margin:1rem 0 .5rem;color:var(--tl-indigo-deep);'>"
-        "Per-metric breakdown"
-        "</div>",
+        f"<div class='tl-text-deep' style='font-weight:500;margin:1rem 0 .5rem;'>"
+        f"{metrics_title}"
+        f"</div>",
         unsafe_allow_html=True,
     )
-    render_metric_details(result)
+    render_metric_details(result, voice=voice)
 
     # ── Method-specific extra visuals (Bayesian posteriors, causal diagnostics, …) ──
     if s.method_visuals:
@@ -119,12 +122,21 @@ def _render_action_bar(s: wstate.WizardState) -> None:
     buttons. Inline beats a sidebar here because business users don't always
     know to look for the sidebar collapse handle."""
     result = s.result
+    voice = s.voice
     badge_color = "var(--tl-danger)" if result.srm_detected else "var(--tl-success)"
-    badge_text = (
-        f"⚠ SRM detected · p = {result.srm_p_value:.4g}"
-        if result.srm_detected
-        else f"✓ SRM passed · p = {result.srm_p_value:.4g}"
-    )
+
+    if voice == "plain":
+        badge_text = (
+            f"⚠ {copy.step5_srm_fail(voice)}"
+            if result.srm_detected
+            else f"✓ {copy.step5_srm_pass(voice)}"
+        )
+    else:
+        badge_text = (
+            f"⚠ SRM detected · p = {result.srm_p_value:.4g}"
+            if result.srm_detected
+            else f"✓ SRM passed · p = {result.srm_p_value:.4g}"
+        )
     method_label = result.method_name
 
     head_a, head_b = st.columns([3, 4])
@@ -132,8 +144,8 @@ def _render_action_bar(s: wstate.WizardState) -> None:
         st.markdown(
             f"""
             <div style="display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;">
-              <div style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;
-                          color:var(--tl-slate);font-weight:600;">{method_label}</div>
+              <div class="tl-text-slate" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;
+                          font-weight:600;">{method_label}</div>
               <div style="color:{badge_color};font-size:.85rem;font-weight:500;">{badge_text}</div>
             </div>
             """,
@@ -142,7 +154,8 @@ def _render_action_bar(s: wstate.WizardState) -> None:
 
     with head_b:
         b1, b2, b3 = st.columns(3)
-        md = to_markdown(s.result, s.prescription, voice=s.voice)
+        bq = s.business_question or ""
+        md = to_markdown(s.result, s.prescription, voice=s.voice, business_question=bq)
         with b1:
             st.download_button(
                 "Markdown",
@@ -152,7 +165,7 @@ def _render_action_bar(s: wstate.WizardState) -> None:
                 use_container_width=True,
                 key="exp_md",
             )
-        pdf_bytes = to_pdf_bytes(s.result, s.prescription, voice=s.voice)
+        pdf_bytes = to_pdf_bytes(s.result, s.prescription, voice=s.voice, business_question=bq)
         with b2:
             if pdf_bytes is not None:
                 st.download_button(

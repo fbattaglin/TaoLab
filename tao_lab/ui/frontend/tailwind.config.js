@@ -6,23 +6,23 @@ export default {
     extend: {
       colors: {
         indigo: {
-          deep: "#1E3A5F",
-          ink: "#0F172A",
+          deep: "var(--tl-indigo-deep)",
+          ink: "var(--tl-indigo-ink)",
         },
         slate: {
-          DEFAULT: "#475569",
-          soft: "#94A3B8",
+          DEFAULT: "var(--tl-slate)",
+          soft: "var(--tl-slate-soft)",
         },
         tangerine: {
-          DEFAULT: "#F97316",
-          soft: "#FFF7ED",
+          DEFAULT: "var(--tl-tangerine)",
+          soft: "var(--tl-tangerine-soft)",
         },
-        mist: "#F8FAFC",
-        cloud: "#FFFFFF",
-        hairline: "#E2E8F0",
-        success: "#059669",
-        warning: "#D97706",
-        danger: "#DC2626",
+        mist: "var(--tl-mist)",
+        cloud: "var(--tl-cloud)",
+        hairline: "var(--tl-hairline)",
+        success: "var(--tl-success)",
+        warning: "var(--tl-warning)",
+        danger: "var(--tl-danger)",
       },
       borderRadius: {
         card: "12px",

@@ -45,6 +45,7 @@ class WizardState:
     # Step 1 — Data
     df: Optional[pl.DataFrame] = None
     file_name: Optional[str] = None
+    business_question: Optional[str] = None  # free-form question, shown in report
 
     # Step 2 — Diagnose
     diagnosis: Optional[DiagnosisReport] = None

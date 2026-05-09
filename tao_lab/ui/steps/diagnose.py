@@ -49,7 +49,7 @@ def render() -> None:
         selected = report.candidates[s.selected_candidate_idx]
         if selected.warnings:
             st.markdown(
-                "<div style='font-weight:500;margin:1.5rem 0 .5rem;color:var(--tl-indigo-deep);'>"
+                "<div class='tl-text-deep' style='font-weight:500;margin:1.5rem 0 .5rem;'>"
                 "Things to know before you run"
                 "</div>",
                 unsafe_allow_html=True,
@@ -59,7 +59,7 @@ def render() -> None:
 
     with side_col:
         st.markdown(
-            f"<div style='font-weight:500;margin:0 0 .75rem;color:var(--tl-indigo-deep);'>"
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .75rem;'>"
             f"{copy.step2_health_title(voice)}</div>",
             unsafe_allow_html=True,
         )
@@ -96,7 +96,7 @@ def _render_warning_card(text: str) -> None:
           border-left:3px solid var(--tl-warning);
           padding:.9rem 1.1rem;margin-bottom:.5rem;
         ">
-          <div style="color:var(--tl-indigo-ink);">{text}</div>
+          <div class="tl-text-ink">{text}</div>
         </div>
         """,
         unsafe_allow_html=True,

@@ -1,13 +1,13 @@
 """Design tokens and global theme injection for Tao Lab v2.
 
 The single source of truth for colors, typography, spacing, and shadow tokens.
-Mirrors the Tailwind config in `frontend/tailwind.config.js` so React custom
-components and Streamlit-rendered surfaces share an identical visual language.
+Forced Light Mode to ensure consistency across systems.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 import streamlit as st
 
@@ -16,8 +16,8 @@ TOKENS = {
     "color": {
         "indigo_deep": "#1E3A5F",
         "indigo_ink": "#0F172A",
-        "slate": "#475569",
-        "slate_soft": "#94A3B8",
+        "slate": "#334155",
+        "slate_soft": "#64748B",
         "tangerine": "#F97316",
         "tangerine_soft": "#FFF7ED",
         "mist": "#F8FAFC",
@@ -53,4 +53,20 @@ def inject_theme() -> None:
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
-__all__ = ["TOKENS", "inject_theme"]
+def get_theme_variables(theme: Optional[str] = None) -> str:
+    """Return the CSS variable declarations for the forced Light Mode."""
+    return (
+        "--tl-mist: #F8FAFC; "
+        "--tl-cloud: #FFFFFF; "
+        "--tl-indigo-ink: #0F172A; "
+        "--tl-indigo-deep: #1E3A5F; "
+        "--tl-hairline: #E2E8F0; "
+        "--tl-slate: #334155; "
+        "--tl-slate-soft: #64748B; "
+        "--tl-tangerine-soft: #FFF7ED; "
+        "--tl-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04); "
+        "--tl-shadow-lifted: 0 4px 12px rgba(15, 23, 42, 0.06);"
+    )
+
+
+__all__ = ["TOKENS", "inject_theme", "get_theme_variables"]

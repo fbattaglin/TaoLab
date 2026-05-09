@@ -7,6 +7,7 @@ import { onRender } from "./streamlit";
 type Args = {
   steps: StepDescriptor[];
   clickable?: boolean;
+  theme_vars?: string;
 };
 
 function App() {
@@ -14,7 +15,17 @@ function App() {
   const ref = useAutoResize([args]);
 
   useEffect(() => {
-    onRender<Args>((payload) => setArgs(payload.args));
+    onRender<Args>((payload) => {
+      setArgs(payload.args);
+      
+      // Inject CSS variables from parent if provided (manual override)
+      if (payload.args.theme_vars) {
+        document.documentElement.style.cssText = payload.args.theme_vars;
+      } else {
+        // Clear any previous overrides for System mode
+        document.documentElement.style.cssText = "";
+      }
+    });
   }, []);
 
   if (!args) return <div ref={ref} />;

@@ -197,6 +197,19 @@ class _Copy:
         plain="Could be random noise",
         technical="Not significant",
     )
+    step5_forest_explanation = CopyPair(
+        plain=(
+            "Each dot shows how much the change moved a metric. "
+            "Dots to the right mean improvement; dots to the left mean it got worse. "
+            "The horizontal bar is our uncertainty — a shorter bar means we're more precise. "
+            "Orange diamonds are statistically meaningful results; open circles are inconclusive."
+        ),
+        technical=(
+            "Forest plot of relative lift with asymmetric 95% Wald CIs per metric (BH-adjusted). "
+            "Orange diamonds = significant (p_adj < α); open circles = non-significant. "
+            "X-axis: relative lift when |control_mean| > 0, absolute lift otherwise."
+        ),
+    )
     verdict_ship = CopyPair(plain="Ship it.", technical="Ship — significant positive effect.")
     verdict_hold = CopyPair(plain="Hold.", technical="Hold — inconclusive or caveated.")
     verdict_no_ship = CopyPair(plain="Don't ship.", technical="Reject — significant adverse effect.")

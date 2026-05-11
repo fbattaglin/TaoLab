@@ -204,6 +204,7 @@ def _render_timeseries_form(s: wstate.WizardState, hint: dict) -> None:
 
     with c2:
         if min_date is not None and max_date is not None:
+            import datetime as _dt
             min_d = min_date.date() if hasattr(min_date, "date") else min_date
             max_d = max_date.date() if hasattr(max_date, "date") else max_date
             span_days = (max_d - min_d).days
@@ -231,63 +232,81 @@ def _render_timeseries_form(s: wstate.WizardState, hint: dict) -> None:
                 unsafe_allow_html=True,
             )
 
-            midpoint = min_d + (max_d - min_d) / 2
+            # ── Default intervention date: from dataset_hints if available, else midpoint ──
+            hint_date_str = s.dataset_hints.get("intervention_date")
+            if hint_date_str:
+                try:
+                    default_date = _dt.date.fromisoformat(hint_date_str)
+                    # Clamp to actual data range
+                    default_date = max(min_d, min(max_d, default_date))
+                except ValueError:
+                    default_date = min_d + (max_d - min_d) // 2
+            else:
+                default_date = min_d + (max_d - min_d) // 2
+
             intervention_date = st.date_input(
                 "Intervention date",
-                value=midpoint,
+                value=default_date,
                 min_value=min_d,
                 max_value=max_d,
                 help="Select the date when the change went live. Only dates within your data range are allowed.",
             )
 
             # ── Live pre/post split preview ──
-            if ts_parsed is not None:
-                import datetime as _dt
-                if isinstance(intervention_date, _dt.date):
-                    n_pre = int((ts_parsed < intervention_date).sum())
-                    n_post = n_obs - n_pre
-                    pct_pre = n_pre / n_obs * 100 if n_obs > 0 else 0
-                    pct_post = n_post / n_obs * 100 if n_obs > 0 else 0
+            if ts_parsed is not None and isinstance(intervention_date, _dt.date):
+                n_pre = int((ts_parsed < intervention_date).sum())
+                n_post = n_obs - n_pre
+                pct_pre = n_pre / n_obs * 100 if n_obs > 0 else 0
+                pct_post = n_post / n_obs * 100 if n_obs > 0 else 0
 
-                    # Visual split bar
-                    st.markdown(
-                        f"""<div style="margin-top:.5rem;">
-                          <div style="font-size:.8rem;color:var(--tl-slate);margin-bottom:.3rem;">
-                            Pre / Post split
-                          </div>
-                          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
-                            <div style="width:{pct_pre:.1f}%;background:var(--tl-indigo-deep);"></div>
-                            <div style="width:{pct_post:.1f}%;background:var(--tl-tangerine);"></div>
-                          </div>
-                          <div style="display:flex;justify-content:space-between;margin-top:.25rem;">
-                            <span style="font-size:.8rem;color:var(--tl-indigo-deep);font-weight:500;">
-                              Pre: {n_pre} obs
-                            </span>
-                            <span style="font-size:.8rem;color:var(--tl-tangerine);font-weight:500;">
-                              Post: {n_post} obs
-                            </span>
-                          </div>
-                        </div>""",
-                        unsafe_allow_html=True,
+                # Visual split bar
+                st.markdown(
+                    f"""<div style="margin-top:.5rem;">
+                      <div style="font-size:.8rem;color:var(--tl-slate);margin-bottom:.3rem;">
+                        Pre / Post split
+                      </div>
+                      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
+                        <div style="width:{pct_pre:.1f}%;background:var(--tl-indigo-deep);"></div>
+                        <div style="width:{pct_post:.1f}%;background:var(--tl-tangerine);"></div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;margin-top:.25rem;">
+                        <span style="font-size:.8rem;color:var(--tl-indigo-deep);font-weight:500;">
+                          Pre: {n_pre} obs
+                        </span>
+                        <span style="font-size:.8rem;color:var(--tl-tangerine);font-weight:500;">
+                          Post: {n_post} obs
+                        </span>
+                      </div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+                if n_pre < 10:
+                    st.warning(
+                        f"Only {n_pre} pre-intervention observations. "
+                        "The counterfactual estimate may be unreliable — "
+                        "consider choosing an earlier intervention date."
                     )
-
-                    if n_pre < 10:
-                        st.warning(
-                            f"Only {n_pre} pre-intervention observations. "
-                            "The counterfactual estimate may be unreliable — "
-                            "consider choosing an earlier intervention date."
-                        )
-                    if n_post < 5:
-                        st.warning(
-                            f"Only {n_post} post-intervention observations. "
-                            "Very few data points to measure the effect."
-                        )
+                if n_post < 5:
+                    st.warning(
+                        f"Only {n_post} post-intervention observations. "
+                        "Very few data points to measure the effect."
+                    )
         else:
+            import datetime as _dt
             st.info("Could not parse dates from the selected column. Enter the intervention date manually.")
             intervention_date = st.date_input(
                 "Intervention date",
                 help="The date when the change or intervention went live.",
             )
+
+    # ── Time-series chart (full-width, below column layout) ──
+    if ts_parsed is not None and metric_col:
+        import datetime as _dt
+        inter_dt = intervention_date if isinstance(intervention_date, _dt.date) else None
+        _render_timeseries_chart(df, timestamp_col, metric_col, ts_parsed, inter_dt, date_format, voice)
+
+    st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
 
     if st.button(copy.step3_run(voice), type="primary", key="ts_run"):
         method_params = {
@@ -378,6 +397,146 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             covariate_cols=covariates,
         )
         wstate.advance()
+
+
+# ───────────────────────── Time-series chart ─────────────────────────
+def _render_timeseries_chart(
+    df: pl.DataFrame,
+    timestamp_col: str,
+    metric_col: str,
+    ts_parsed,
+    intervention_date,
+    date_format: str | None,
+    voice: str,
+) -> None:
+    """Full-width Plotly chart showing the metric over time, split pre/post intervention."""
+    import datetime as _dt
+
+    try:
+        import plotly.graph_objects as go
+    except ImportError:
+        return  # Plotly not available — skip silently
+
+    # ── Build a unified date + value series ──
+    try:
+        metric_series = df[metric_col]
+        # Parse timestamps to date objects
+        if df[timestamp_col].dtype == pl.Utf8:
+            fmt = date_format or "%Y-%m-%d"
+            dates_parsed = df[timestamp_col].str.to_date(fmt, strict=False)
+        elif df[timestamp_col].dtype in (pl.Date, pl.Datetime):
+            dates_parsed = df[timestamp_col]
+        else:
+            return  # Can't parse
+
+        # Convert to Python objects for Plotly
+        dates = [d.date() if hasattr(d, "date") else d for d in dates_parsed.to_list() if d is not None]
+        values = metric_series.to_list()
+
+        if len(dates) != len(values) or len(dates) == 0:
+            return
+
+        # Sort by date
+        pairs = sorted(zip(dates, values), key=lambda x: x[0])
+        dates_sorted = [p[0] for p in pairs]
+        values_sorted = [p[1] for p in pairs]
+
+    except Exception:  # noqa: BLE001
+        return  # Silently skip chart on any parse failure
+
+    # ── Split into pre / post ──
+    INDIGO = "#1E3A5F"
+    TANGERINE = "#F97316"
+    DANGER = "#DC2626"
+
+    pre_dates, pre_vals, post_dates, post_vals = [], [], [], []
+    for d, v in zip(dates_sorted, values_sorted):
+        if intervention_date and d < intervention_date:
+            pre_dates.append(d)
+            pre_vals.append(v)
+        else:
+            post_dates.append(d)
+            post_vals.append(v)
+
+    fig = go.Figure()
+
+    # Pre-intervention trace (indigo)
+    if pre_dates:
+        fig.add_trace(go.Scatter(
+            x=pre_dates,
+            y=pre_vals,
+            mode="lines+markers",
+            name="Pre-intervention",
+            line=dict(color=INDIGO, width=2),
+            marker=dict(color=INDIGO, size=5),
+            hovertemplate="%{x|%b %d, %Y}: %{y:,.2f}<extra>Pre</extra>",
+        ))
+
+    # Post-intervention trace (tangerine)
+    if post_dates:
+        fig.add_trace(go.Scatter(
+            x=post_dates,
+            y=post_vals,
+            mode="lines+markers",
+            name="Post-intervention",
+            line=dict(color=TANGERINE, width=2),
+            marker=dict(color=TANGERINE, size=5),
+            hovertemplate="%{x|%b %d, %Y}: %{y:,.2f}<extra>Post</extra>",
+        ))
+
+    # Intervention date line
+    if intervention_date:
+        fig.add_vline(
+            x=str(intervention_date),
+            line_dash="dash",
+            line_color=DANGER,
+            line_width=1.5,
+            annotation_text=intervention_date.strftime("Intervention · %b %d, %Y"),
+            annotation_position="top right",
+            annotation_font=dict(size=11, color=DANGER),
+        )
+
+    metric_label = metric_col.replace("_", " ").title()
+    fig.update_layout(
+        height=260,
+        margin=dict(l=0, r=0, t=28, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#F8FAFC",
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font=dict(size=11),
+        ),
+        xaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            tickfont=dict(size=11),
+        ),
+        yaxis=dict(
+            gridcolor="#E2E8F0",
+            zeroline=False,
+            tickfont=dict(size=11),
+            title=metric_label,
+            title_font=dict(size=11),
+        ),
+        hovermode="x unified",
+    )
+
+    label = "plain" if voice == "plain" else "technical"
+    caption = (
+        f"**{metric_label}** over time. "
+        "The dashed line marks the intervention date — drag the date picker above to explore different splits."
+    ) if label == "plain" else (
+        f"**{metric_label}** time series. Pre-period (indigo) feeds the counterfactual model; "
+        "post-period (tangerine) is compared against it."
+    )
+
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.caption(caption)
 
 
 # ───────────────────────── helpers ─────────────────────────

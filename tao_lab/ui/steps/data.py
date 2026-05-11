@@ -52,8 +52,12 @@ _SAMPLE_CHIPS = [
         "label": "Loyalty programme launch",
         "blurb_plain": "Did launching a loyalty programme permanently lift weekly sales?",
         "blurb_technical": "104 weeks · AR(1) + holiday seasonal · 52/52 pre/post · +12% step",
-        "scenario": "Your loyalty rewards programme went live on January 1st. Two years of weekly data.",
+        "scenario": "Your loyalty rewards programme went live on January 2, 2023. Two years of weekly data — did it move the needle?",
         "file": "time_series_weekly.csv",
+        "hints": {
+            "intervention_date": "2023-01-02",
+            "intervention_label": "Loyalty programme launch · Jan 2, 2023",
+        },
     },
     {
         "key": "causal_401k",
@@ -125,6 +129,7 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
                 s.df = df
                 s.file_name = uploaded.name
                 s.diagnosis = None  # invalidate downstream state on new upload
+                s.dataset_hints = {}  # user's own data has no pre-set hints
                 st.rerun()
 
         st.markdown(
@@ -144,7 +149,7 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
                         key=f"sample_chip_{chip['key']}",
                         use_container_width=True,
                     ):
-                        _load_sample(s, chip["file"])
+                        _load_sample(s, chip["file"], hints=chip.get("hints"))
                         # Pre-fill business question from scenario when loading a sample
                         if chip.get("scenario") and not s.business_question:
                             s.business_question = chip["scenario"]
@@ -178,7 +183,7 @@ def _read_uploaded_file(uploaded) -> pl.DataFrame | None:
         return None
 
 
-def _load_sample(s: wstate.WizardState, filename: str) -> None:
+def _load_sample(s: wstate.WizardState, filename: str, hints: dict | None = None) -> None:
     path = _DATASETS_DIR / filename
     if not path.exists():
         st.error(
@@ -189,6 +194,7 @@ def _load_sample(s: wstate.WizardState, filename: str) -> None:
     s.df = pl.read_csv(path)
     s.file_name = filename
     s.diagnosis = None
+    s.dataset_hints = hints or {}
 
 
 # ─────────────────────── Loaded state ───────────────────────

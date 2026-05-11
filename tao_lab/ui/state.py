@@ -65,6 +65,10 @@ class WizardState:
     # Cross-cutting (Phase B/C will use this — kept here for forward compat)
     voice: str = "plain"  # plain | technical
 
+    # Dataset-specific hints (populated when a sample chip is loaded)
+    # Keys: "intervention_date" (ISO str), "intervention_label" (display str), etc.
+    dataset_hints: dict = field(default_factory=dict)
+
     def clear_results(self) -> None:
         """Clear all analysis artifacts. Call this when configuration changes."""
         self.result = None

@@ -484,16 +484,27 @@ def _render_timeseries_chart(
             hovertemplate="%{x|%b %d, %Y}: %{y:,.2f}<extra>Post</extra>",
         ))
 
-    # Intervention date line
+    # Intervention date line — use add_shape + add_annotation separately to avoid
+    # Plotly's buggy annotation-position calculation on string-typed date axes.
     if intervention_date:
-        fig.add_vline(
-            x=str(intervention_date),
-            line_dash="dash",
-            line_color=DANGER,
-            line_width=1.5,
-            annotation_text=intervention_date.strftime("Intervention · %b %d, %Y"),
-            annotation_position="top right",
-            annotation_font=dict(size=11, color=DANGER),
+        x_iso = intervention_date.isoformat()
+        fig.add_shape(
+            type="line",
+            x0=x_iso, x1=x_iso,
+            y0=0, y1=1,
+            yref="paper",
+            line=dict(dash="dash", color=DANGER, width=1.5),
+        )
+        fig.add_annotation(
+            x=x_iso,
+            y=0.98,
+            yref="paper",
+            text=intervention_date.strftime("Intervention · %b %d, %Y"),
+            showarrow=False,
+            xanchor="left",
+            yanchor="top",
+            font=dict(size=11, color=DANGER),
+            bgcolor="rgba(255,255,255,0.75)",
         )
 
     metric_label = metric_col.replace("_", " ").title()
@@ -535,7 +546,7 @@ def _render_timeseries_chart(
         "post-period (tangerine) is compared against it."
     )
 
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
     st.caption(caption)
 
 

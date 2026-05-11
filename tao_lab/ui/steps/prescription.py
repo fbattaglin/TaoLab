@@ -123,7 +123,7 @@ def render() -> None:
             f"</div>",
             unsafe_allow_html=True,
         )
-        st.plotly_chart(render_forest_plot(result), use_container_width=True)
+        st.plotly_chart(render_forest_plot(result), width="stretch")
         st.caption(copy.step5_forest_explanation(voice))
 
     # ── Per-metric detail rows ──
@@ -139,7 +139,7 @@ def render() -> None:
     if s.method_visuals:
         with st.expander("Method-specific diagnostics", expanded=False):
             for fig in s.method_visuals:
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
                 st.caption(_plot_explanation(result.method_name, voice))
 
     # ── Reproducibility ──

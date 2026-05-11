@@ -84,7 +84,7 @@ def _render_distribution_preview(df: pl.DataFrame, cols: List[str]) -> None:
                 yaxis=dict(showgrid=True, gridcolor="#E2E8F0"),
             )
             with slot:
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
                 summary = _histogram_summary(arr, col)
                 if summary:
                     st.markdown(

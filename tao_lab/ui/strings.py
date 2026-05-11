@@ -107,6 +107,14 @@ class _Copy:
         plain="This data could fit more than one method. Pick the one that matches how your data was collected.",
         technical="Multiple methods are viable. Selection depends on the data-generating process.",
     )
+    step2_override_expander = CopyPair(
+        plain="Choose a different method",
+        technical="Override automatic method selection",
+    )
+    step2_override_hint = CopyPair(
+        plain="Our recommendation is based on your data's structure. If you know your analysis goal, pick any method below.",
+        technical="Engine score reflects structural signals only. Override if domain knowledge contradicts the heuristic.",
+    )
 
     # Step 3 — Configure
     step3_variant_eyebrow = CopyPair(

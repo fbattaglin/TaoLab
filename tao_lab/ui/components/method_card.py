@@ -146,6 +146,62 @@ def render_method_selector(
     return new_selection
 
 
+def render_method_override_picker(
+    candidates: List[MethodCandidate],
+    selected_idx: int,
+    *,
+    voice: Voice = "plain",
+) -> Optional[int]:
+    """Compact picker that lists ALL candidates (including score=0 ones).
+
+    Shown inside an expander so it doesn't clutter the normal flow.
+    Returns the newly selected index, or None if unchanged.
+    """
+    st.markdown(
+        f"<div style='font-size:.85rem;color:var(--tl-slate);margin-bottom:1rem;"
+        f"line-height:1.5;'>{copy.step2_override_hint(voice)}</div>",
+        unsafe_allow_html=True,
+    )
+
+    new_selection: Optional[int] = None
+
+    for i, candidate in enumerate(candidates):
+        is_selected = i == selected_idx
+        blurb = METHOD_BLURBS.get(candidate.method)
+        display_name = blurb.display_name if blurb else candidate.method
+        radio = "●" if is_selected else "○"
+        radio_color = "var(--tl-tangerine)" if is_selected else "var(--tl-slate)"
+        score_pct = int(candidate.score * 100)
+        score_color = "var(--tl-slate)" if candidate.score > 0 else "#CBD5E1"
+
+        col_name, col_score, col_btn = st.columns([3, 1, 1], gap="small")
+        with col_name:
+            st.markdown(
+                f"<div style='display:flex;align-items:center;gap:.5rem;padding:.4rem 0;'>"
+                f"<span style='color:{radio_color};font-size:1rem;'>{radio}</span>"
+                f"<span style='font-size:.9rem;font-weight:{'600' if is_selected else '400'};'>"
+                f"{display_name}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        with col_score:
+            st.markdown(
+                f"<div style='font-size:.8rem;color:{score_color};padding:.55rem 0;'>"
+                f"{score_pct}% match</div>",
+                unsafe_allow_html=True,
+            )
+        with col_btn:
+            if not is_selected:
+                if st.button(
+                    "Select",
+                    key=f"override_pick_{i}",
+                    use_container_width=True,
+                ):
+                    new_selection = i
+
+    return new_selection
+
+
 # ── Backward-compat wrappers (used if any old code calls them) ──
 
 def render_method_card(method_name: str, rationale: str, *, voice: Voice = "plain") -> None:

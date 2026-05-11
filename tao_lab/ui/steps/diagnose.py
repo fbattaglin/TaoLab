@@ -13,7 +13,7 @@ import streamlit as st
 from tao_lab.diagnose.engine import compute_data_health_score, diagnose_data
 from tao_lab.ui import state as wstate
 from tao_lab.ui.components.data_health import render_health_score
-from tao_lab.ui.components.method_card import render_method_selector
+from tao_lab.ui.components.method_card import render_method_override_picker, render_method_selector
 from tao_lab.ui.strings import copy
 
 
@@ -56,6 +56,18 @@ def render() -> None:
             )
             for w in selected.warnings:
                 _render_warning_card(w)
+
+        # ── Manual override expander ──
+        st.markdown("<div style='margin-top:1.5rem;'></div>", unsafe_allow_html=True)
+        with st.expander(copy.step2_override_expander(voice), expanded=False):
+            override_idx = render_method_override_picker(
+                report.candidates,
+                s.selected_candidate_idx,
+                voice=voice,
+            )
+            if override_idx is not None:
+                s.selected_candidate_idx = override_idx
+                st.rerun()
 
     with side_col:
         st.markdown(

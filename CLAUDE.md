@@ -35,6 +35,12 @@ npm run build          # tsc + vite build + post-build copy to dist/
 
 Dist artefacts are committed. Each component has its own entry point (`stepper.html`, `verdict.html`, `prescription.html`) and is served from `dist/<name>/index.html` by its Python wrapper in `tao_lab/ui/components/`.
 
+A pre-commit hook prevents committing stale `dist/` artefacts. Install once after cloning:
+
+```bash
+bash scripts/install_hooks.sh
+```
+
 ### Optional PDF export
 
 PDF export requires WeasyPrint (not installed by default):

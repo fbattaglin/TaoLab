@@ -1,13 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
 /*
- * Tao Lab v2 — Global stylesheet.
+ * Tao Lab v2 — Global stylesheet (Forced Light Mode).
  * Tokens kept in sync with tao_lab/ui/theme.py and frontend/tailwind.config.js.
  */
 
 :root {
   --tl-indigo-deep: #1E3A5F;
   --tl-indigo-ink: #0F172A;
-  --tl-slate: #475569;
-  --tl-slate-soft: #94A3B8;
+  --tl-slate: #334155;
+  --tl-slate-soft: #64748B;
   --tl-tangerine: #F97316;
   --tl-tangerine-soft: #FFF7ED;
   --tl-mist: #F8FAFC;
@@ -24,7 +26,7 @@
   --tl-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04);
   --tl-shadow-lifted: 0 4px 12px rgba(15, 23, 42, 0.06);
 
-  --tl-font-sans: -apple-system, "Inter", "Söhne", system-ui, sans-serif;
+  --tl-font-sans: "Outfit", -apple-system, "Inter", "Söhne", system-ui, sans-serif;
   --tl-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
   --tl-max-content: 960px;
@@ -33,8 +35,8 @@
 /* ───── Page chrome ───── */
 .stApp,
 .stApp [data-testid="stAppViewContainer"] {
-  background: var(--tl-mist);
-  color: var(--tl-indigo-ink);
+  background: var(--tl-mist) !important;
+  color: var(--tl-indigo-ink) !important;
   font-family: var(--tl-font-sans);
 }
 
@@ -54,7 +56,7 @@
 .stApp h2,
 .stApp h3,
 .stApp h4 {
-  color: var(--tl-indigo-deep);
+  color: var(--tl-indigo-deep) !important;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -66,13 +68,18 @@
 .stApp p,
 .stApp li,
 .stApp [data-testid="stMarkdownContainer"] {
-  color: var(--tl-indigo-ink);
+  color: var(--tl-indigo-ink) !important;
   line-height: 1.6;
 }
 
 .stApp [data-testid="stMarkdownContainer"] {
   max-width: 70ch;
 }
+
+/* Specific text utilities with !important to ensure they win when used in markdown cards. */
+.tl-text-ink { color: var(--tl-indigo-ink) !important; }
+.tl-text-slate { color: var(--tl-slate) !important; }
+.tl-text-deep { color: var(--tl-indigo-deep) !important; }
 
 /* Tabular nums everywhere numbers matter. */
 .stApp [data-testid="stMetricValue"],
@@ -92,22 +99,22 @@
 
 /* st.metric becomes a card. */
 .stApp [data-testid="stMetric"] {
-  background: var(--tl-cloud);
-  border: 1px solid var(--tl-hairline);
-  border-radius: var(--tl-radius-card);
-  box-shadow: var(--tl-shadow-card);
-  padding: 1rem 1.25rem;
+  background: var(--tl-cloud) !important;
+  border: 1px solid var(--tl-hairline) !important;
+  border-radius: var(--tl-radius-card) !important;
+  box-shadow: var(--tl-shadow-card) !important;
+  padding: 1rem 1.25rem !important;
 }
 
 /* Expander → softer card. */
 .stApp [data-testid="stExpander"] {
-  background: var(--tl-cloud);
+  background: var(--tl-cloud) !important;
   border: 1px solid var(--tl-hairline) !important;
-  border-radius: var(--tl-radius-card);
-  box-shadow: var(--tl-shadow-card);
+  border-radius: var(--tl-radius-card) !important;
+  box-shadow: var(--tl-shadow-card) !important;
 }
 .stApp [data-testid="stExpander"] details > summary {
-  color: var(--tl-indigo-deep);
+  color: var(--tl-indigo-deep) !important;
   font-weight: 500;
 }
 
@@ -126,15 +133,15 @@
 }
 .stApp .stButton > button[kind="primary"],
 .stApp .stButton > button[data-testid="baseButton-primary"] {
-  background: var(--tl-tangerine);
-  border-color: var(--tl-tangerine);
-  color: var(--tl-cloud);
-  box-shadow: 0 1px 2px rgba(249, 115, 22, 0.25);
+  background: var(--tl-tangerine) !important;
+  border-color: var(--tl-tangerine) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgba(249, 115, 22, 0.25) !important;
 }
 .stApp .stButton > button[kind="primary"]:hover,
 .stApp .stButton > button[data-testid="baseButton-primary"]:hover {
-  filter: brightness(0.96);
-  background: var(--tl-tangerine);
+  filter: brightness(1.1) !important;
+  background: var(--tl-tangerine) !important;
 }
 
 /* ───── Form controls ───── */
@@ -144,27 +151,47 @@
 .stApp .stNumberInput > div > div,
 .stApp .stDateInput > div > div {
   border-radius: var(--tl-radius-control);
-  border-color: var(--tl-hairline);
+  border-color: var(--tl-hairline) !important;
+  background-color: var(--tl-cloud) !important;
+  color: var(--tl-indigo-ink) !important;
 }
+
+/* Aggressively force labels and related text to be visible. 
+   Streamlit often nests labels in 'p' tags inside specialized data-testids. */
 .stApp label,
+.stApp [data-testid="stWidgetLabel"] p,
 .stApp .stCheckbox,
 .stApp .stRadio {
-  color: var(--tl-slate);
-  font-size: 0.9rem;
+  color: var(--tl-slate) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+}
+
+.stApp label p {
+  color: var(--tl-slate) !important;
+}
+
+/* Ensure our custom card headings always win. */
+.tl-card-title {
+  color: var(--tl-indigo-deep) !important;
+  font-size: 1.15rem !important;
+  font-weight: 600 !important;
+  margin: .4rem 0 .3rem !important;
 }
 
 /* ───── Alerts: keep semantic but lighten ───── */
 .stApp [data-baseweb="notification"],
 .stApp [data-testid="stAlert"] {
-  border-radius: var(--tl-radius-card);
-  border: 1px solid var(--tl-hairline);
-  box-shadow: var(--tl-shadow-card);
+  border-radius: var(--tl-radius-card) !important;
+  border: 1px solid var(--tl-hairline) !important;
+  box-shadow: var(--tl-shadow-card) !important;
+  background-color: var(--tl-cloud) !important;
 }
 
 /* ───── Sidebar (hidden in v2 — kept narrow if Streamlit forces it) ───── */
 .stApp [data-testid="stSidebar"] {
-  background: var(--tl-cloud);
-  border-right: 1px solid var(--tl-hairline);
+  background: var(--tl-cloud) !important;
+  border-right: 1px solid var(--tl-hairline) !important;
 }
 
 /* ───── Hero wash for the landing state ───── */
@@ -183,6 +210,12 @@
   background: var(--tl-hairline);
   margin: 2rem 0;
   border: 0;
+}
+
+.tl-label-heavy {
+  font-weight: 500 !important;
+  color: var(--tl-indigo-deep) !important;
+  margin-bottom: 0.25rem;
 }
 
 /* ───── Stepper (Python fallback if React component fails to load) ───── */

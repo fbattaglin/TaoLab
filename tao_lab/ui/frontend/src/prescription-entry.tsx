@@ -5,12 +5,23 @@ import { PrescriptionCard, PrescriptionCardProps } from "./PrescriptionCard";
 import { useAutoResize } from "./Stepper";
 import { onRender } from "./streamlit";
 
+interface Args extends PrescriptionCardProps {
+  theme_vars?: string;
+}
+
 function App() {
-  const [args, setArgs] = useState<PrescriptionCardProps | null>(null);
+  const [args, setArgs] = useState<Args | null>(null);
   const ref = useAutoResize([args]);
 
   useEffect(() => {
-    onRender<PrescriptionCardProps>((p) => setArgs(p.args));
+    onRender<Args>((p) => {
+      setArgs(p.args);
+      if (p.args.theme_vars) {
+        document.documentElement.style.cssText = p.args.theme_vars;
+      } else {
+        document.documentElement.style.cssText = "";
+      }
+    });
   }, []);
 
   if (!args) return <div ref={ref} />;

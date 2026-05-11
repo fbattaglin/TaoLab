@@ -45,6 +45,7 @@ class WizardState:
     # Step 1 — Data
     df: Optional[pl.DataFrame] = None
     file_name: Optional[str] = None
+    business_question: Optional[str] = None  # free-form question, shown in report
 
     # Step 2 — Diagnose
     diagnosis: Optional[DiagnosisReport] = None
@@ -63,6 +64,17 @@ class WizardState:
 
     # Cross-cutting (Phase B/C will use this — kept here for forward compat)
     voice: str = "plain"  # plain | technical
+
+    # Dataset-specific hints (populated when a sample chip is loaded)
+    # Keys: "intervention_date" (ISO str), "intervention_label" (display str), etc.
+    dataset_hints: dict = field(default_factory=dict)
+
+    def clear_results(self) -> None:
+        """Clear all analysis artifacts. Call this when configuration changes."""
+        self.result = None
+        self.narration = None
+        self.prescription = None
+        self.method_visuals = []
 
 
 _STATE_KEY = "tl_state"

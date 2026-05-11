@@ -1,3 +1,47 @@
+# Virtual Environments
 venv/
 .venv/
-.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node / Frontend
+node_modules/
+tao_lab/ui/frontend/dist-old/
+.npm
+.eslintcache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+.claude/
+
+# App local data
+datasets/*.csv
+!datasets/ab_test_ecommerce.csv
+!datasets/causal_lalonde.csv
+!datasets/time_series_marketing.csv

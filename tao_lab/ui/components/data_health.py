@@ -92,11 +92,9 @@ def render_data_snapshot(df: pl.DataFrame, assignment_col: Optional[str] = None)
                 title=f"Group balance — '{assignment_col}'",
                 height=220,
                 margin=dict(l=20, r=20, t=40, b=20),
-                plot_bgcolor="white",
-                paper_bgcolor="white",
                 yaxis=dict(showgrid=True, gridcolor="#E2E8F0"),
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         except Exception:  # noqa: BLE001
             pass
 

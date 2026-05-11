@@ -30,10 +30,15 @@ def render_verdict(
     if not (_FRONTEND_DIST / "index.html").exists():
         _render_fallback(state, headline, subtitle)
         return
+    
+    from tao_lab.ui.theme import get_theme_variables
+    theme_vars = get_theme_variables()
+
     _component(
         state=state,
         headline=headline,
         subtitle=subtitle,
+        theme_vars=theme_vars,
         default=None,
         key=key or f"taolab_verdict_{state}",
     )

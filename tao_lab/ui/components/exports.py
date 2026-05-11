@@ -12,7 +12,9 @@
 
 from __future__ import annotations
 
+import base64
 import html
+from pathlib import Path
 from typing import Optional
 
 import yaml
@@ -23,6 +25,13 @@ from tao_lab.interpret.narrator import (
     render_markdown,
 )
 from tao_lab.methods.base import AnalysisResult
+
+# Resolve once at import time; falls back gracefully if the file is absent.
+_LOGO_PATH = Path(__file__).parent.parent / "static" / "tao_lab_logo.png"
+_LOGO_B64: str = ""
+if _LOGO_PATH.exists():
+    _raw = _LOGO_PATH.read_bytes()
+    _LOGO_B64 = base64.b64encode(_raw).decode()
 
 
 _VERDICT_LABEL: dict[Verdict, str] = {
@@ -44,8 +53,13 @@ def to_markdown(
     narration: PrescriptionNarration,
     *,
     voice: str = "plain",
+    business_question: str = "",
 ) -> str:
     body = render_markdown(narration, voice=voice)  # type: ignore[arg-type]
+
+    # Prepend business question if provided
+    if business_question:
+        body = f"**Question:** {business_question}\n\n{body}"
 
     metric_rows = ["", "## Metrics", "", "| Metric | Lift | p (raw) | p (BH-adj) | 95% CI (abs) | Significant |", "|---|---|---|---|---|---|"]
     for m in result.metrics:
@@ -79,6 +93,7 @@ def to_pdf_bytes(
     narration: PrescriptionNarration,
     *,
     voice: str = "plain",
+    business_question: str = "",
 ) -> Optional[bytes]:
     """Return a single-page A4 PDF of the prescription, or None if WeasyPrint
     is not installed. Catching ImportError keeps the optional extra optional."""
@@ -87,7 +102,7 @@ def to_pdf_bytes(
     except Exception:  # noqa: BLE001
         return None
 
-    html_doc = _render_html(result, narration, voice=voice)
+    html_doc = _render_html(result, narration, voice=voice, business_question=business_question)
     return HTML(string=html_doc).write_pdf()
 
 
@@ -96,6 +111,7 @@ def _render_html(
     narration: PrescriptionNarration,
     *,
     voice: str,
+    business_question: str = "",
 ) -> str:
     pick = (lambda pair: pair.plain) if voice == "plain" else (lambda pair: pair.technical)
     next_steps = (
@@ -162,6 +178,13 @@ def _render_html(
     .footer { color: #94A3B8; font-size: 8.5pt; margin-top: 18pt; }
     """
 
+    question_html = ""
+    if business_question:
+        question_html = (
+            f'<div style="color:#475569;font-size:10pt;margin-bottom:8pt;">'
+            f'<strong>Question:</strong> {html.escape(business_question)}</div>'
+        )
+
     return f"""<!doctype html>
 <html><head><meta charset="utf-8" /><style>{css}</style></head><body>
   <div class="header">
@@ -169,8 +192,11 @@ def _render_html(
       <div class="eyebrow">Prescription</div>
       <h1 style="color:{verdict_color};">{verdict_label}</h1>
       <div class="headline">{headline}</div>
+      {question_html}
     </div>
-    <div class="eyebrow">tao lab</div>
+    <div style="text-align:right;">
+      {f'<img src="data:image/png;base64,{_LOGO_B64}" style="height:42pt;width:auto;" alt="Tao Lab" />' if _LOGO_B64 else '<div class="eyebrow">tao lab</div>'}
+    </div>
   </div>
 
   <div class="section"><div class="section__label">Diagnosis</div><p>{diagnosis}</p></div>

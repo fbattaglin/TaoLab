@@ -105,7 +105,7 @@ def render_forest_plot(result: AnalysisResult) -> go.Figure:
     fig.update_layout(
         title=dict(
             text="Lift & 95% confidence intervals",
-            font=dict(size=14, color=_INDIGO_INK),
+            font=dict(size=14),
             x=0,
             xanchor="left",
         ),
@@ -120,10 +120,7 @@ def render_forest_plot(result: AnalysisResult) -> go.Figure:
         yaxis=dict(
             showgrid=False,
             zeroline=False,
-            tickfont=dict(size=12, color=_INDIGO_INK),
         ),
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
         showlegend=False,
         margin=dict(l=20, r=20, t=50, b=40),
         height=max(180, 60 * len(result.metrics) + 90),

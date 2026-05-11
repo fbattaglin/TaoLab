@@ -2,13 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --tl-indigo-deep: #1E3A5F;
+  --tl-indigo-ink: #0F172A;
+  --tl-slate: #334155;
+  --tl-slate-soft: #64748B;
+  --tl-tangerine: #F97316;
+  --tl-tangerine-soft: #FFF7ED;
+  --tl-mist: #F8FAFC;
+  --tl-cloud: #FFFFFF;
+  --tl-hairline: #E2E8F0;
+  --tl-success: #059669;
+  --tl-warning: #D97706;
+  --tl-danger: #DC2626;
+
+  --tl-radius-card: 12px;
+  --tl-radius-control: 8px;
+}
+
 html,
 body,
 #root {
   margin: 0;
   padding: 0;
-  background: transparent;
-  color: #0f172a;
+  background: transparent !important;
+  color: var(--tl-indigo-ink);
   font-family: -apple-system, "Inter", "Söhne", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

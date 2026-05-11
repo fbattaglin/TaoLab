@@ -9,6 +9,7 @@ type Args = {
   state: VerdictState;
   headline: string;
   subtitle?: string;
+  theme_vars?: string;
 };
 
 function App() {
@@ -16,7 +17,14 @@ function App() {
   const ref = useAutoResize([args]);
 
   useEffect(() => {
-    onRender<Args>((p) => setArgs(p.args));
+    onRender<Args>((p) => {
+      setArgs(p.args);
+      if (p.args.theme_vars) {
+        document.documentElement.style.cssText = p.args.theme_vars;
+      } else {
+        document.documentElement.style.cssText = "";
+      }
+    });
   }, []);
 
   if (!args) return <div ref={ref} />;

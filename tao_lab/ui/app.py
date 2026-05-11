@@ -12,6 +12,8 @@ can iterate on individual steps without touching this file.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import streamlit as st
 
 from tao_lab.ui import state as wstate
@@ -23,24 +25,27 @@ from tao_lab.ui.steps import prescription as step_prescription
 from tao_lab.ui.steps import run as step_run
 from tao_lab.ui.theme import inject_theme
 
+# Resolve logo path relative to this file so it works from any working directory.
+_LOGO = Path(__file__).parent / "static" / "tao_lab_logo.png"
 
 # ───── Page setup ─────
 st.set_page_config(
     page_title="Tao Lab",
+    page_icon=str(_LOGO),
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 inject_theme()
+
+# ───── Native Streamlit logo (sidebar + collapsed-sidebar icon) ─────
+st.logo(str(_LOGO))
 
 # ───── Header ─────
 state = wstate.get_state()
 
 header_left, header_right = st.columns([3, 1])
 with header_left:
-    st.markdown(
-        "<div style='font-weight:600;font-size:1.1rem;color:var(--tl-indigo-deep);'>tao lab</div>",
-        unsafe_allow_html=True,
-    )
+    st.image(str(_LOGO), width=148)
 with header_right:
     voice_choice = st.radio(
         "Reader",
@@ -57,6 +62,7 @@ with header_right:
     new_voice = "plain" if voice_choice == "Plain" else "technical"
     if new_voice != state.voice:
         state.voice = new_voice
+        st.rerun()
 
 # ───── Stepper ─────
 clicked = render_stepper(state)

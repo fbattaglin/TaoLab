@@ -202,20 +202,30 @@ def _build_headline(
         )
     m = primary.metric
     sign = primary.direction
-    direction_word = {"up": "increased", "down": "decreased", "flat": "did not move"}[sign]
 
+    # ── Plain: business language, absolute numbers, no jargon ──
+    direction_plain = {"up": "more", "down": "less", "flat": "about the same"}[sign]
+    if sign == "flat":
+        plain = (
+            f"The groups performed about the same on {m.metric_name} "
+            f"(treatment: {m.treatment_mean:.4g}, control: {m.control_mean:.4g})."
+        )
+    else:
+        plain = (
+            f"The treatment group had {abs(m.lift_absolute):.4g} {direction_plain} "
+            f"{m.metric_name} on average ({m.treatment_mean:.4g} vs {m.control_mean:.4g}, "
+            f"{_fmt_pct(m.lift_relative)})."
+        )
+
+    # ── Technical: unchanged precision, full statistical shorthand ──
     p_eff = _effective_p(m)
     if p_eff is None:
-        plain = (
+        direction_word = {"up": "increased", "down": "decreased", "flat": "did not move"}[sign]
+        tech = (
             f"Treatment {direction_word} {m.metric_name} by {_fmt_pct(m.lift_relative)}."
         )
-        tech = plain
     else:
         p_label = "p (adj)" if m.p_value_adjusted is not None else "p"
-        plain = (
-            f"Treatment {direction_word} {m.metric_name} by {_fmt_pct(m.lift_relative)} "
-            f"(95% CI [{m.ci_lower:.3g}, {m.ci_upper:.3g}], {p_label} = {p_eff:.3g})."
-        )
         tech_extra = ""
         if m.test_statistic is not None:
             tech_extra += f", stat = {m.test_statistic:.3g}"
@@ -236,35 +246,49 @@ def _build_diagnosis(
     method = result.method_name
     sig_count = sum(1 for m in result.metrics if m.is_significant)
 
+    # ── Plain: lead with the finding, then context ──
     plain_parts = []
     if primary is not None:
         m = primary.metric
         if m.is_significant and primary.direction == "up":
             plain_parts.append(
-                f"The treatment shows a real, measurable improvement on {m.metric_name}."
+                f"The data shows a real difference on {m.metric_name} — "
+                f"the group that got the change performed measurably better."
             )
         elif m.is_significant and primary.direction == "down":
             plain_parts.append(
-                f"The treatment is meaningfully worse than control on {m.metric_name}."
+                f"The data shows a real difference on {m.metric_name} — "
+                f"the group that got the change performed measurably worse."
             )
         else:
             plain_parts.append(
-                f"We can't distinguish the treatment effect on {m.metric_name} from noise."
+                f"The data doesn't show a clear difference on {m.metric_name}. "
+                f"The observed gap could easily be due to normal variation."
             )
 
     if n_metrics > 1:
-        plain_parts.append(
-            f"Across {n_metrics} metrics, {sig_count} reached statistical significance "
-            f"after multiple-testing correction."
-        )
+        if sig_count == 0:
+            plain_parts.append(
+                f"None of the {n_metrics} metrics showed a clear difference."
+            )
+        elif sig_count == n_metrics:
+            plain_parts.append(
+                f"All {n_metrics} metrics showed a real difference."
+            )
+        else:
+            plain_parts.append(
+                f"Of {n_metrics} metrics tested, {sig_count} showed a real difference "
+                f"(after adjusting for multiple comparisons)."
+            )
     if result.srm_detected:
         plain_parts.append(
             "However, the groups aren't sized the way they should be — that usually "
-            "points to an assignment or logging bug and undermines every metric below."
+            "points to an assignment or logging bug and undermines every result below."
         )
 
     plain = " ".join(plain_parts) or "No diagnosis available."
 
+    # ── Technical: unchanged ──
     tech_parts = [f"Method: {method}.", f"n_metrics = {n_metrics}, sig = {sig_count}."]
     if primary is not None and primary.metric.p_value is not None:
         m = primary.metric
@@ -350,13 +374,39 @@ def _build_reasoning(
         return TextPair(plain="—", technical="—")
     m = primary.metric
     p_for_text = m.p_value if m.p_value is not None else 1.0
-    plain = (
-        f"On the primary metric ({m.metric_name}), the treatment group averaged "
-        f"{m.treatment_mean:.4g} versus {m.control_mean:.4g} for control — "
-        f"a {_fmt_pct(m.lift_relative)} change. "
-        f"A two-sample comparison gives p = {p_for_text:.3g}, with a 95% confidence "
-        f"interval for the absolute lift of [{m.ci_lower:.3g}, {m.ci_upper:.3g}]."
+
+    # ── Plain: three-line decision template ──
+    # Line 1: What happened (business terms, absolute numbers)
+    direction_word = {"up": "more", "down": "less", "flat": "about the same amount of"}[
+        primary.direction
+    ]
+    line1 = (
+        f"On {m.metric_name}, the group that got the change averaged "
+        f"{m.treatment_mean:.4g} vs {m.control_mean:.4g} in the baseline group — "
+        f"{abs(m.lift_absolute):.4g} {direction_word} ({_fmt_pct(m.lift_relative)})."
     )
+
+    # Line 2: How sure we are (confidence language, anchored to CI)
+    confidence_word = _confidence_word(p_for_text)
+    line2 = (
+        f"We're {confidence_word} the real effect is between "
+        f"{m.ci_lower:.3g} and {m.ci_upper:.3g} (95% confidence interval)."
+    )
+
+    # Line 3: Decision relevance
+    if m.is_significant and primary.direction == "up":
+        line3 = "This is large enough and consistent enough to act on."
+    elif m.is_significant and primary.direction == "down":
+        line3 = "This is a clear negative signal — investigate what's driving the regression."
+    else:
+        line3 = (
+            "The difference isn't large enough relative to noise to be confident it's real. "
+            "More data or a different approach may be needed."
+        )
+
+    plain = f"{line1} {line2} {line3}"
+
+    # ── Technical: unchanged ──
     tech_extras = []
     if m.test_statistic is not None:
         tech_extras.append(f"test stat = {m.test_statistic:.4g}")
@@ -376,6 +426,19 @@ def _build_reasoning(
         tech += f"; {extras}"
     tech += "."
     return TextPair(plain=plain, technical=tech)
+
+
+def _confidence_word(p: float) -> str:
+    """Map a p-value to a plain-language confidence descriptor."""
+    if p < 0.001:
+        return "very confident"
+    if p < 0.01:
+        return "quite confident"
+    if p < 0.05:
+        return "fairly confident"
+    if p < 0.10:
+        return "somewhat confident (though not at the standard threshold)"
+    return "not confident"
 
 
 def _build_caveats(

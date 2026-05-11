@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tao Lab is a modular, statistically rigorous experimentation platform for data scientists. It bridges simple A/B testing scripts and complex causal inference libraries via a unified plugin interface for analysis, diagnosis, and interpretation.
+Tao Lab is a modular, statistically rigorous experimentation platform that serves two audiences simultaneously: data scientists (full statistical detail) and business users (plain-language interpretation). It bridges simple A/B testing scripts and complex causal inference libraries via a unified plugin interface for analysis, diagnosis, and interpretation.
 
 ## Commands
 
@@ -35,6 +35,14 @@ npm run build          # tsc + vite build + post-build copy to dist/
 
 Dist artefacts are committed. Each component has its own entry point (`stepper.html`, `verdict.html`, `prescription.html`) and is served from `dist/<name>/index.html` by its Python wrapper in `tao_lab/ui/components/`.
 
+### Optional PDF export
+
+PDF export requires WeasyPrint (not installed by default):
+
+```bash
+uv pip install 'tao-lab[report]'
+```
+
 ## Architecture
 
 ### Plugin System
@@ -54,6 +62,45 @@ Pydantic models (`ExperimentConfig`, `AnalysisResult`, `MetricResult`, `RatioMet
 4. **Run** → selected `Method.fit()` → mandatory SRM check (`tao_lab/checks/srm.py`) → optional BH correction (`tao_lab/checks/multiple_testing.py`)
 5. **Interpret** → Claude API narration with template fallback (`tao_lab/interpret/narrator.py`)
 6. **Report** → Markdown/YAML snapshot (`tao_lab/report/generator.py`)
+
+### Dual-Audience Content System (Phase 4)
+
+The app serves Plain and Technical readers at equal depth. Three content layers live in `tao_lab/ui/strings.py`:
+
+**1. `CopyPair` — voice-aware microcopy**
+```python
+label = CopyPair(plain="Group column", technical="Assignment column")
+label("plain")  # → "Group column"
+label("technical")  # → "Assignment column"
+```
+`copy = _Copy()` is the singleton. All step files import `copy` from `strings.py`. Add new pairs to `_Copy` when any label needs to differ by audience.
+
+**2. `GlossaryEntry` — structured term definitions**
+Each entry has `term`, `short` (tooltip), `description` (drawer), `plain_synonym`, `first_use` (shown once per step on first appearance), and `learn_more` (citation URL). 28 entries cover all major statistical terms. Used by `explainer.py` helpers.
+
+**3. `MethodBlurb` / `METHOD_BLURBS` — voice-aware method descriptions**
+Central source for method card content. Each blurb has `display_name`, `plain`, `technical`, `assumptions_plain`, `assumptions_technical`. `method_card.py` imports from here — do not maintain separate blurb dicts in component files.
+
+### Explainer / Inline Education System (`tao_lab/ui/components/explainer.py`)
+
+Four building blocks for inline education:
+
+| Function | Purpose |
+|----------|---------|
+| `term_label(key, *, voice)` | Styled term with tooltip from GLOSSARY |
+| `term_with_hint(key, *, voice, step)` | `term_label` + shows `first_use` text the first time per step (tracked in `st.session_state["_tl_seen_terms_{step}"]`) |
+| `concept_drawer(key, *, use_when, avoid_when, data_context)` | Enhanced expander with use/avoid guidance, worked example from user data, and citation link |
+| `helper_caption(text)` | Small italic explanatory caption |
+
+### Narrator Plain Mode (`tao_lab/interpret/narrator.py`)
+
+Plain-mode narration follows a three-line decision template — distinct from the technical register which stays unchanged:
+
+- **Line 1 (What happened)**: `"The treatment group had {abs_lift} more/less {metric} on average ({treatment_mean} vs {control_mean})."`
+- **Line 2 (How sure)**: `"We're {confidence_word} confident the real effect is between {ci_lower} and {ci_upper} (95% confidence interval)."`
+- **Line 3 (Decision relevance)**: drawn from the recommendation field.
+
+`_confidence_word(p)` maps p-values → "very confident / quite confident / fairly confident / somewhat confident / not confident". Technical mode functions are byte-for-byte unchanged.
 
 ### Diagnosis Engine (Phase D)
 
@@ -99,12 +146,25 @@ return None  # stale — ignore
 3. **Mandatory SRM**: Every `Method` runner must execute `tao_lab.checks.srm` before returning results (p < 0.001 threshold).
 4. **Structured Results**: Use the existing Pydantic models for all result objects; do not return raw dicts.
 5. **Config hints flow downstream**: `MethodCandidate.config_hint` is the contract between the diagnosis engine and the configure step. Keys like `timestamp_col`, `date_format`, `assignment_col`, `metric_cols`, `covariates` must be set correctly in each `_score_*()` function so Step 3 pre-populates correctly without requiring user re-entry.
+6. **Voice threading**: Every UI component that renders user-visible text accepts a `voice: Voice` parameter and uses `copy.<key>(voice)` for labels. Never hard-code English strings that a business user would read — add a `CopyPair` instead.
+7. **Street-cred preservation**: Technical mode shows identical numbers, precision (3–4 sig figs), and terminology to the original implementation. p-values, CI bounds, effect sizes are never hidden — they may be secondary in plain mode but always accessible via "Show details" or tooltip.
 
 ## UI Standards
 
-- **Semaphore colors**: Success `#00C853` (green), Warning `#FFD600` (yellow), Danger `#D50000` (red)
-- **Precision**: 3 significant figures by default
-- **Progressive disclosure**: Wizard mode (heuristic recommendations) vs. Expert mode (full control over alpha, ratios, covariates)
+- **Design tokens** (source of truth: `tao_lab/ui/theme.py`): indigo-deep `#1E3A5F`, tangerine `#F97316`, slate `#475569`, success `#059669`, warning `#D97706`, danger `#DC2626`
+- **Precision**: 3–4 significant figures (use `:.4g` format spec)
+- **Progressive disclosure**: helper captions visible by default; statistical detail in expanders
+- **Logo**: source in `logo/tao_lab_logo.png`, served from `tao_lab/ui/static/tao_lab_logo.png`. Applied via `st.logo()` (sidebar), `st.image()` (header + hero), and base64 in PDF exports. Do not embed the PNG as base64 in live UI renders (562 KB) — use the file path.
+
+## WizardState Key Fields (`tao_lab/ui/state.py`)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `voice` | `"plain" \| "technical"` | Reader mode, flows to every component |
+| `business_question` | `Optional[str]` | Free-form question entered on Step 1; included in Markdown and PDF exports |
+| `selected_candidate_idx` | `int` | Which ranked method candidate the user chose (not always rank-0) |
+| `engine` | `str` | `"Frequentist"` or `"Bayesian (NumPyro)"` for A/B tests |
+| `method_visuals` | `List[go.Figure]` | Plotly figures from `Method.visualize()`, shown in the method-diagnostics expander |
 
 ## Test Datasets
 

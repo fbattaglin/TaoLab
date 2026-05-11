@@ -101,7 +101,6 @@ class CausalInference(Method):
             fig = px.histogram(df_overlap, x="Propensity Score", color="Group", 
                                marginal="box", barmode="overlay",
                                title="Propensity Score Overlap (Positivity Check)")
-            fig.update_layout(template="simple_white")
             figures.append(fig)
             
         return figures

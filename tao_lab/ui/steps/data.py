@@ -29,28 +29,42 @@ _LOGO = Path(__file__).parent.parent / "static" / "tao_lab_logo.png"
 
 _SAMPLE_CHIPS = [
     {
-        "key": "ab",
-        "label": "E-commerce A/B test",
-        "blurb_plain": "Did a website change increase revenue?",
-        "blurb_technical": "10k users · revenue + CTR ratio metric",
-        "scenario": "You redesigned the checkout page and randomly showed it to half your visitors.",
-        "file": "ab_test_ecommerce.csv",
+        "key": "ab_saas",
+        "label": "SaaS onboarding A/B",
+        "blurb_plain": "Did a new onboarding flow increase activation and revenue?",
+        "blurb_technical": "30k users · lognormal revenue + pages/session ratio · 2 covariates",
+        "scenario": "Your product team shipped a redesigned onboarding. Half of new signups saw it.",
+        "file": "ab_test_saas.csv",
     },
     {
-        "key": "ts",
-        "label": "Marketing time-series",
-        "blurb_plain": "Did a marketing campaign boost daily revenue?",
-        "blurb_technical": "180 days · intervention 2023-04-15",
-        "scenario": "You launched a campaign on a specific date and want to know if it moved the needle.",
-        "file": "time_series_marketing.csv",
+        "key": "ab_email",
+        "label": "Email small-N (Bayesian)",
+        "blurb_plain": "Too little data to be sure — was a personalised subject line worth it?",
+        "blurb_technical": "600 users · freq. p=0.16 · Bayesian P(open) ≈ 92% · small-N showcase",
+        "scenario": (
+            "You ran a beta on 600 subscribers. "
+            "The t-test says 'not significant'. Bayesian posterior disagrees."
+        ),
+        "file": "ab_test_email.csv",
     },
     {
-        "key": "ci",
-        "label": "Lalonde causal",
-        "blurb_plain": "Did a job training program increase earnings?",
-        "blurb_technical": "Observational treatment + 7 covariates",
-        "scenario": "You have data on who participated in a program but didn't randomly assign them.",
-        "file": "causal_lalonde.csv",
+        "key": "ts_retail",
+        "label": "Loyalty programme launch",
+        "blurb_plain": "Did launching a loyalty programme permanently lift weekly sales?",
+        "blurb_technical": "104 weeks · AR(1) + holiday seasonal · 52/52 pre/post · +12% step",
+        "scenario": "Your loyalty rewards programme went live on January 1st. Two years of weekly data.",
+        "file": "time_series_weekly.csv",
+    },
+    {
+        "key": "causal_401k",
+        "label": "401k savings (causal)",
+        "blurb_plain": "Does joining a savings plan really increase wealth, or do savers just start richer?",
+        "blurb_technical": "9k rows · DML · income + age + education confounders · ATE ≈ $9k",
+        "scenario": (
+            "People who enroll in 401k plans tend to earn more already. "
+            "Use causal inference to isolate the plan's true effect."
+        ),
+        "file": "causal_401k.csv",
     },
 ]
 
@@ -119,22 +133,28 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
             unsafe_allow_html=True,
         )
 
-        chip_cols = st.columns(len(_SAMPLE_CHIPS))
-        for slot, chip in zip(chip_cols, _SAMPLE_CHIPS):
-            blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]
-            with slot:
-                if st.button(
-                    chip["label"],
-                    key=f"sample_chip_{chip['key']}",
-                    use_container_width=True,
-                ):
-                    _load_sample(s, chip["file"])
-                    st.rerun()
-                st.markdown(
-                    f"<div style='color:var(--tl-slate);font-size:.8rem;"
-                    f"line-height:1.4;margin-top:-6px;'>{blurb}</div>",
-                    unsafe_allow_html=True,
-                )
+        # Render chips as a 2×2 grid so 4 entries don't get too narrow
+        for row_chips in [_SAMPLE_CHIPS[:2], _SAMPLE_CHIPS[2:]]:
+            chip_cols = st.columns(len(row_chips), gap="small")
+            for slot, chip in zip(chip_cols, row_chips):
+                blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]
+                with slot:
+                    if st.button(
+                        chip["label"],
+                        key=f"sample_chip_{chip['key']}",
+                        use_container_width=True,
+                    ):
+                        _load_sample(s, chip["file"])
+                        # Pre-fill business question from scenario when loading a sample
+                        if chip.get("scenario") and not s.business_question:
+                            s.business_question = chip["scenario"]
+                        st.rerun()
+                    st.markdown(
+                        f"<div style='color:var(--tl-slate);font-size:.8rem;"
+                        f"line-height:1.4;margin-top:-6px;'>{blurb}</div>",
+                        unsafe_allow_html=True,
+                    )
+            st.markdown("<div style='height:.25rem'></div>", unsafe_allow_html=True)
 
     with right_col:
         st.markdown(
@@ -144,7 +164,7 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
             unsafe_allow_html=True,
         )
         if _LOGO.exists():
-            st.image(str(_LOGO), use_container_width=True)
+            st.image(str(_LOGO), width="stretch")
         st.markdown("</div>", unsafe_allow_html=True)
 
 

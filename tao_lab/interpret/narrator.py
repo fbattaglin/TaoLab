@@ -26,7 +26,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from tao_lab.methods.base import AnalysisResult, MetricResult
+from tao_lab.methods.base import AnalysisResult, HTEResult, MetricResult
 
 
 Verdict = Literal["ship", "hold", "dont_ship"]
@@ -60,6 +60,7 @@ class PrescriptionNarration(BaseModel):
     caveats: List[CaveatItem] = Field(default_factory=list)
     next_steps_plain: List[str] = Field(default_factory=list)
     next_steps_technical: List[str] = Field(default_factory=list)
+    hte_summary: Optional[TextPair] = None  # populated when HTE results exist
 
 
 # ─────────────────────────── Public API ───────────────────────────
@@ -116,6 +117,10 @@ def _template_prescription(result: AnalysisResult) -> PrescriptionNarration:
     caveats = _build_caveats(result, primary)
     next_plain, next_tech = _build_next_steps(verdict, result, primary)
 
+    hte_summary = None
+    if result.hte is not None:
+        hte_summary = _build_hte_narration(result.hte)
+
     return PrescriptionNarration(
         verdict=verdict,
         confidence=confidence,
@@ -127,6 +132,7 @@ def _template_prescription(result: AnalysisResult) -> PrescriptionNarration:
         caveats=caveats,
         next_steps_plain=next_plain,
         next_steps_technical=next_tech,
+        hte_summary=hte_summary,
     )
 
 
@@ -580,6 +586,46 @@ def _build_next_steps(
     return plain, tech
 
 
+# ─────────────────────────── HTE narration ───────────────────────────
+def _build_hte_narration(hte: HTEResult) -> TextPair:
+    """Build voice-aware narration for heterogeneous treatment effects."""
+    if not hte.subgroups:
+        return TextPair(
+            plain="The analysis did not find meaningful variation in treatment response across groups.",
+            technical="No significant CATE heterogeneity detected across quartile segments.",
+        )
+
+    # Find most important feature
+    top_feat_name, top_feat_imp = max(
+        hte.feature_importances.items(), key=lambda x: x[1]
+    )
+    feat_label = top_feat_name.replace("_", " ")
+
+    # Find the subgroups with highest and lowest CATE
+    best_sg = max(hte.subgroups, key=lambda s: s.mean_cate)
+    worst_sg = min(hte.subgroups, key=lambda s: s.mean_cate)
+    spread = best_sg.mean_cate - worst_sg.mean_cate
+
+    plain = (
+        f"The treatment effect varied meaningfully across your data. "
+        f"{feat_label.title()} was the strongest driver of this variation. "
+        f"The most responsive group ({best_sg.feature.replace('_', ' ')} "
+        f"{best_sg.segment_label}) saw an effect of {best_sg.mean_cate:,.0f}, "
+        f"while the least responsive ({worst_sg.feature.replace('_', ' ')} "
+        f"{worst_sg.segment_label}) saw {worst_sg.mean_cate:,.0f} — "
+        f"a spread of {spread:,.0f}."
+    )
+    technical = (
+        f"Heterogeneity detected. Top feature: {top_feat_name} "
+        f"(importance={top_feat_imp:.3f}). "
+        f"CATE range across segments: [{worst_sg.mean_cate:,.0f}, "
+        f"{best_sg.mean_cate:,.0f}]. "
+        f"Spread = {spread:,.0f}. n_features={len(hte.feature_names)}."
+    )
+
+    return TextPair(plain=plain, technical=technical)
+
+
 # ─────────────────────────── LLM enhancement (optional) ───────────────────────────
 def _enrich_with_llm(
     base: PrescriptionNarration,
@@ -701,5 +747,9 @@ def render_markdown(p: PrescriptionNarration, *, voice: Literal["plain", "techni
         parts.extend(["", "### Next steps"])
         for ns in next_steps:
             parts.append(f"- {ns}")
+
+    if p.hte_summary is not None:
+        hte_text = p.hte_summary.plain if voice == "plain" else p.hte_summary.technical
+        parts.extend(["", "### Who Benefits Most", hte_text])
 
     return "\n".join(parts)

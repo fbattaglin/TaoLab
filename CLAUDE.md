@@ -145,6 +145,18 @@ return None  # stale — ignore
 | `methods/time_series.py` | Interrupted TS | CausalPy counterfactual estimation |
 | `methods/causal_inference.py` | Observational Causal | DoWhy (identification) + EconML DML (estimation) |
 
+### Heterogeneous Treatment Effects (HTE)
+
+HTE is an optional mode within Causal Inference, not a separate method. When enabled via `ExperimentConfig.method_params["hte_enabled"]`, `CausalInference.fit()` runs `CausalForestDML` alongside `LinearDML` to estimate individual-level treatment effects (CATE).
+
+**Key models:** `HTEResult`, `SubgroupEffect` in `base.py`. The `AnalysisResult.hte` field is `Optional[HTEResult]` — `None` when HTE is not enabled.
+
+**Guardrails:** HTE is only offered when N ≥ 3,000 and ≥ 2 covariates exist. The diagnosis engine sets `config_hint["hte_eligible"]` to control UI visibility.
+
+**UI flow:** Step 2 badge on Causal card → Step 3 checkbox toggle → Step 4 dual-model fit → Step 5 "Who benefits most?" section with feature importance bar chart, CATE histogram, and subgroup table.
+
+**Architecture:** LinearDML provides ATE (more efficient, lower variance). CausalForestDML provides CATE (heterogeneity detection). Both run independently; ATE is reported from LinearDML, CATE from the forest. Effect modifiers (X) default to confounders (W) but can be customized in technical mode.
+
 ## Implementation Rules
 
 1. **Polars First**: All internal transformations use `polars`. Convert to `pandas` only at the boundary of external libraries (`statsmodels`, `econml`, `causalpy`). **Cast columns in Polars before `to_pandas()`** — PyArrow-backed extension types produced by `to_pandas()` can break standard Pandas reductions (`.mean()`, `.std()`) on float or string columns.

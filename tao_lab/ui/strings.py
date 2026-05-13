@@ -115,6 +115,10 @@ class _Copy:
         plain="Our recommendation is based on your data's structure. If you know your analysis goal, pick any method below.",
         technical="Engine score reflects structural signals only. Override if domain knowledge contradicts the heuristic.",
     )
+    step2_hte_badge = CopyPair(
+        plain="Can analyze who benefits most",
+        technical="HTE eligible (CausalForestDML)",
+    )
 
     # Step 3 — Configure
     step3_variant_eyebrow = CopyPair(
@@ -149,6 +153,22 @@ class _Copy:
         plain="Why are these fields pre-filled?",
         technical="Inferred configuration",
     )
+    step3_hte_toggle = CopyPair(
+        plain="Analyze who benefits most",
+        technical="Enable HTE estimation",
+    )
+    step3_hte_help = CopyPair(
+        plain="Find which groups respond differently to the treatment. Takes a bit longer.",
+        technical="Fits CausalForestDML alongside LinearDML for individual-level CATE estimates.",
+    )
+    step3_hte_features_label = CopyPair(
+        plain="Which factors might cause different responses?",
+        technical="Effect modifier features (X)",
+    )
+    step3_hte_features_help = CopyPair(
+        plain="Pick the characteristics that might make people respond differently — like age, income, or location.",
+        technical="CATE conditioning features. Defaults to same as confounders (W=X).",
+    )
 
     # Step 4 — Run
     step4_title = CopyPair(
@@ -170,6 +190,10 @@ class _Copy:
     step4_progress_viz = CopyPair(
         plain="Preparing charts...",
         technical="Rendering diagnostics...",
+    )
+    step4_progress_hte = CopyPair(
+        plain="Finding which groups respond differently...",
+        technical="Fitting CausalForestDML for heterogeneous effects...",
     )
 
     # Step 5 — Prescription
@@ -221,6 +245,61 @@ class _Copy:
     verdict_ship = CopyPair(plain="Ship it.", technical="Ship — significant positive effect.")
     verdict_hold = CopyPair(plain="Hold.", technical="Hold — inconclusive or caveated.")
     verdict_no_ship = CopyPair(plain="Don't ship.", technical="Reject — significant adverse effect.")
+
+    # Step 5 — HTE section
+    step5_hte_title = CopyPair(
+        plain="Who benefits most?",
+        technical="Heterogeneous Treatment Effects",
+    )
+    step5_hte_intro = CopyPair(
+        plain="Not everyone responds the same way. This section shows which groups benefited more or less than average.",
+        technical="CATE estimates from CausalForestDML reveal effect heterogeneity across observed covariates.",
+    )
+    step5_hte_importance_title = CopyPair(
+        plain="What drives the difference",
+        technical="Feature importance for heterogeneity",
+    )
+    step5_hte_importance_caption = CopyPair(
+        plain=(
+            "Taller bars mean that characteristic matters more for determining who benefits. "
+            "The top variable explains the most variation in how people responded to the treatment."
+        ),
+        technical=(
+            "Feature importance from the causal forest, measuring each covariate's contribution "
+            "to CATE heterogeneity. Normalized to sum to 1."
+        ),
+    )
+    step5_hte_histogram_title = CopyPair(
+        plain="How the effect varies across individuals",
+        technical="CATE distribution",
+    )
+    step5_hte_histogram_caption = CopyPair(
+        plain=(
+            "Each bar represents a group of people with a similar treatment effect. "
+            "The orange dotted line is the average effect. "
+            "People to the right of zero benefited; people to the left were harmed."
+        ),
+        technical=(
+            "Distribution of individual-level CATE estimates. "
+            "Orange dotted line = ATE. Red dashed line = zero (no effect). "
+            "Spread indicates degree of effect heterogeneity."
+        ),
+    )
+    step5_hte_subgroup_title = CopyPair(
+        plain="Effect by group",
+        technical="Subgroup CATE estimates",
+    )
+    step5_hte_subgroup_caption = CopyPair(
+        plain=(
+            "This table splits your data into groups and shows how much each group benefited. "
+            "Arrows mark groups that benefited notably more or less than average."
+        ),
+        technical=(
+            "Quartile-based CATE decomposition per feature. "
+            "CIs are averaged within each segment. Arrows flag segments "
+            "deviating >10% from the population ATE."
+        ),
+    )
 
 
 copy = _Copy()

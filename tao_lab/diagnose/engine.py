@@ -450,6 +450,10 @@ def _score_causal(signals: Dict[str, Any]) -> MethodCandidate:
     # ── Requirements ──
     requirements.append("Select which columns are confounders vs. outcomes")
 
+    # ── HTE eligibility ──
+    hte_eligible = n_rows >= 3000 and n_covariates >= 2
+    config_hint["hte_eligible"] = hte_eligible
+
     score = max(0.0, min(1.0, score))
 
     rationale = (

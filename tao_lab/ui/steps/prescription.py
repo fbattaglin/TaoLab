@@ -135,6 +135,11 @@ def render() -> None:
     )
     render_metric_details(result, voice=voice)
 
+    # ── HTE section (when available) ──
+    if result.hte is not None:
+        st.markdown("<hr class='tl-divider'>", unsafe_allow_html=True)
+        _render_hte_section(result, p, voice)
+
     # ── Method-specific extra visuals ──
     if s.method_visuals:
         with st.expander("Method-specific diagnostics", expanded=False):
@@ -246,6 +251,176 @@ def _render_key_numbers_card(
         </div>""",
         unsafe_allow_html=True,
     )
+
+
+# ─────────────────────────── HTE section ───────────────────────────
+def _render_hte_section(
+    result: AnalysisResult,
+    prescription: PrescriptionNarration,
+    voice: str,
+) -> None:
+    """Render the 'Who benefits most?' section when HTE results are available."""
+    hte = result.hte
+    if hte is None:
+        return
+
+    # ── Section title ──
+    st.markdown(
+        f"<div class='tl-text-deep' style='font-weight:600;font-size:1.15rem;"
+        f"margin:0 0 .5rem;'>{copy.step5_hte_title(voice)}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── HTE narration ──
+    if prescription.hte_summary is not None:
+        hte_text = (
+            prescription.hte_summary.plain
+            if voice == "plain"
+            else prescription.hte_summary.technical
+        )
+        st.markdown(
+            f"<div style='font-size:.92rem;line-height:1.55;color:var(--tl-slate);"
+            f"margin-bottom:1.25rem;max-width:80ch;'>{hte_text}</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── Two-column: importance + histogram ──
+    col_imp, col_hist = st.columns([1, 1], gap="large")
+
+    with col_imp:
+        st.markdown(
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .5rem;'>"
+            f"{copy.step5_hte_importance_title(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+        _render_hte_importance(hte)
+        st.caption(copy.step5_hte_importance_caption(voice))
+
+    with col_hist:
+        st.markdown(
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .5rem;'>"
+            f"{copy.step5_hte_histogram_title(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+        _render_hte_histogram(hte)
+        st.caption(copy.step5_hte_histogram_caption(voice))
+
+    # ── Subgroup table (full width) ──
+    if hte.subgroups:
+        st.markdown(
+            f"<div class='tl-text-deep' style='font-weight:500;margin:1rem 0 .5rem;'>"
+            f"{copy.step5_hte_subgroup_title(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+        _render_hte_subgroup_table(hte, voice)
+        st.caption(copy.step5_hte_subgroup_caption(voice))
+
+
+def _render_hte_importance(hte) -> None:
+    """Horizontal bar chart of feature importances for heterogeneity."""
+    import plotly.graph_objects as go
+
+    sorted_feats = sorted(
+        hte.feature_importances.items(), key=lambda x: x[1], reverse=True
+    )
+    names = [f[0].replace("_", " ").title() for f in sorted_feats]
+    values = [f[1] for f in sorted_feats]
+
+    fig = go.Figure(
+        go.Bar(
+            x=values,
+            y=names,
+            orientation="h",
+            marker_color="#F97316",  # tangerine
+            text=[f"{v:.0%}" for v in values],
+            textposition="outside",
+        )
+    )
+    fig.update_layout(
+        height=max(180, 45 * len(names)),
+        margin=dict(l=0, r=50, t=10, b=0),
+        xaxis=dict(
+            range=[0, max(values) * 1.25] if values else [0, 1],
+            showticklabels=False,
+            showgrid=False,
+        ),
+        yaxis=dict(autorange="reversed"),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#F8FAFC",
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def _render_hte_histogram(hte) -> None:
+    """Histogram of individual CATE values."""
+    import numpy as np
+    import plotly.graph_objects as go
+
+    cate = np.array(hte.cate_values)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Histogram(
+            x=cate,
+            nbinsx=40,
+            marker_color="#1E3A5F",  # indigo-deep
+            opacity=0.85,
+        )
+    )
+    # Zero reference line
+    fig.add_vline(x=0, line_dash="dash", line_color="#DC2626", line_width=1.5)
+    # ATE reference line
+    fig.add_vline(
+        x=hte.ate_from_forest,
+        line_dash="dot",
+        line_color="#F97316",
+        line_width=2,
+        annotation_text="ATE",
+        annotation_position="top right",
+        annotation_font_size=11,
+        annotation_font_color="#F97316",
+    )
+
+    fig.update_layout(
+        height=220,
+        margin=dict(l=0, r=0, t=20, b=0),
+        xaxis_title="Individual treatment effect",
+        yaxis_title="Count",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#F8FAFC",
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def _render_hte_subgroup_table(hte, voice: str) -> None:
+    """Render a dataframe of subgroup CATE estimates."""
+    ate = hte.ate_from_forest
+    rows = []
+    for sg in hte.subgroups:
+        # Arrow for segments deviating >10% from ATE
+        if ate != 0:
+            deviation = (sg.mean_cate - ate) / abs(ate)
+            if deviation > 0.10:
+                direction = "▲ "
+            elif deviation < -0.10:
+                direction = "▼ "
+            else:
+                direction = ""
+        else:
+            direction = ""
+
+        rows.append(
+            {
+                "Feature": sg.feature.replace("_", " ").title(),
+                "Segment": sg.segment_label,
+                "Size": sg.segment_size,
+                "Effect (CATE)": f"{direction}{sg.mean_cate:,.0f}",
+                "95% CI": f"[{sg.ci_lower:,.0f}, {sg.ci_upper:,.0f}]",
+            }
+        )
+    st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
 # ─────────────────────────── Export rail ───────────────────────────

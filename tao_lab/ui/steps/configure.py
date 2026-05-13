@@ -387,14 +387,46 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
                 "Including them helps isolate the true effect of the change."
             )
 
+    # ── HTE toggle (only when eligible) ──
+    hte_enabled = False
+    hte_features = covariates  # default: same as confounders
+    hte_eligible = hint.get("hte_eligible", False) and len(covariates) >= 2
+    if hte_eligible:
+        st.markdown("<div style='height:.75rem'></div>", unsafe_allow_html=True)
+        hte_enabled = st.checkbox(
+            copy.step3_hte_toggle(voice),
+            value=False,
+            key="ci_hte_toggle",
+            help=copy.step3_hte_help(voice),
+        )
+        if hte_enabled:
+            helper_caption(copy.step3_hte_help(voice))
+            # Advanced: let technical users customize effect modifiers
+            if voice == "technical":
+                with st.expander("Advanced: separate effect modifiers from confounders", expanded=False):
+                    hte_features = st.multiselect(
+                        copy.step3_hte_features_label(voice),
+                        covariates,
+                        default=covariates,
+                        help=copy.step3_hte_features_help(voice),
+                        key="ci_hte_features",
+                    )
+                    if not hte_features:
+                        hte_features = covariates
+
     if st.button(copy.step3_run(voice), type="primary", key="ci_run"):
         s.clear_results()
+        method_params = {}
+        if hte_enabled:
+            method_params["hte_enabled"] = True
+            method_params["hte_features"] = hte_features
         s.config = ExperimentConfig(
             assignment_col=treatment_col,
             control_val="",
             treatment_val="",
             metric_cols=[outcome_col],
             covariate_cols=covariates,
+            method_params=method_params,
         )
         wstate.advance()
 

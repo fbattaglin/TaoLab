@@ -48,7 +48,12 @@ def _execute(s: wstate.WizardState) -> None:
     voice: Voice = s.voice
 
     with st.status(copy.step4_title(voice)) as status:
-        st.write(copy.step4_progress_fit(voice))
+        # ── Show HTE progress hint before fit (if enabled) ──
+        if s.config and s.config.method_params.get("hte_enabled"):
+            st.write(copy.step4_progress_fit(voice))
+            st.write(copy.step4_progress_hte(voice))
+        else:
+            st.write(copy.step4_progress_fit(voice))
         result = method.fit(s.df, s.config)
 
         # ── SRM check result (plain-language) ──

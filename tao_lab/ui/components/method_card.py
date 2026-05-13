@@ -96,6 +96,18 @@ def render_method_selector(
                 f"{assumptions}</div>"
             )
 
+        # ── HTE badge (Causal Inference only) ──
+        hte_html = ""
+        if (
+            candidate.method == "Causal Inference"
+            and candidate.config_hint.get("hte_eligible")
+        ):
+            hte_badge = copy.step2_hte_badge(voice)
+            hte_html = (
+                f"<div style='font-size:.8rem;color:var(--tl-tangerine);margin-top:.5rem;"
+                f"font-weight:500;'>✦ {hte_badge}</div>"
+            )
+
         card_html = f"""
         <div style="
           border:{border_width} solid {border_color};
@@ -129,6 +141,7 @@ def render_method_selector(
           </p>
           {assume_html}
           {req_html}
+          {hte_html}
         </div>
         """
         st.markdown(card_html, unsafe_allow_html=True)

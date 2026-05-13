@@ -1,8 +1,33 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 import polars as pl
 from pydantic import BaseModel, Field
 import plotly.graph_objects as go
+
+
+# ── HTE (Heterogeneous Treatment Effects) models ──
+
+class SubgroupEffect(BaseModel):
+    """CATE summary for one segment (e.g., one quartile of a feature)."""
+    feature: str
+    segment_label: str   # "Q1 (25–35)"
+    segment_size: int
+    mean_cate: float
+    ci_lower: float
+    ci_upper: float
+
+
+class HTEResult(BaseModel):
+    """Heterogeneous Treatment Effect estimates from CausalForestDML."""
+    feature_names: List[str]
+    feature_importances: Dict[str, float]       # feature → importance (0–1)
+    cate_values: List[float]                     # per-observation CATE
+    cate_ci_lower: List[float]
+    cate_ci_upper: List[float]
+    subgroups: List[SubgroupEffect]              # quartile-based subgroup effects
+    ate_from_forest: float                       # ATE from CausalForestDML (for comparison)
+    ate_forest_ci: Tuple[float, float]
+
 
 class RatioMetric(BaseModel):
     name: str
@@ -46,6 +71,7 @@ class AnalysisResult(BaseModel):
     srm_detected: bool
     diagnostics: Dict[str, Any] = Field(default_factory=dict)
     config_snapshot: ExperimentConfig
+    hte: Optional[HTEResult] = None  # populated when HTE is enabled
 
 class Method(ABC):
     @abstractmethod

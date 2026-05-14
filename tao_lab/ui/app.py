@@ -60,6 +60,17 @@ with header_right:
         ),
     )
     new_voice = "signal" if voice_choice == "Signal" else "spectrum"
+    
+    # ───── Sub-label for visible branding ─────
+    context_text = "The Boardroom" if voice_choice == "Signal" else "The Lab"
+    st.markdown(
+        f"<div style='text-align:right; font-size:0.7rem; color:var(--tl-slate); "
+        f"margin-top:-12px; margin-right:4px; font-weight:600; "
+        f"text-transform:uppercase; letter-spacing:0.1em; opacity:0.8;'>"
+        f"{context_text}</div>",
+        unsafe_allow_html=True
+    )
+
     if new_voice != state.voice:
         state.voice = new_voice
         st.rerun()

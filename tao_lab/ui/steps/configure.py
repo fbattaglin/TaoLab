@@ -132,6 +132,8 @@ def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
             avoid_when="You're doing observational analysis (no randomisation to check).",
         )
 
+    unit_val, aud_size = _render_business_impact_inputs(voice, key_suffix="ab")
+
     st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
     if st.button(
         copy.step3_run(voice), type="primary", key="ab_run", use_container_width=False
@@ -147,6 +149,8 @@ def _render_ab_form(s: wstate.WizardState, hint: dict) -> None:
                 control_val: expected_ratio_c,
                 treatment_val: 1.0 - expected_ratio_c,
             },
+            business_unit_value=unit_val,
+            audience_size=aud_size,
         )
         s.engine = engine
         wstate.advance()
@@ -306,6 +310,8 @@ def _render_timeseries_form(s: wstate.WizardState, hint: dict) -> None:
         inter_dt = intervention_date if isinstance(intervention_date, _dt.date) else None
         _render_timeseries_chart(df, timestamp_col, metric_col, ts_parsed, inter_dt, date_format, voice)
 
+    unit_val, aud_size = _render_business_impact_inputs(voice, key_suffix="ts")
+
     st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
 
     if st.button(copy.step3_run(voice), type="primary", key="ts_run"):
@@ -322,6 +328,8 @@ def _render_timeseries_form(s: wstate.WizardState, hint: dict) -> None:
             treatment_val="",
             metric_cols=[metric_col],
             method_params=method_params,
+            business_unit_value=unit_val,
+            audience_size=aud_size,
         )
         wstate.advance()
 
@@ -414,6 +422,8 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
                     if not hte_features:
                         hte_features = covariates
 
+    unit_val, aud_size = _render_business_impact_inputs(voice, key_suffix="ci")
+
     if st.button(copy.step3_run(voice), type="primary", key="ci_run"):
         s.clear_results()
         method_params = {}
@@ -427,6 +437,8 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             metric_cols=[outcome_col],
             covariate_cols=covariates,
             method_params=method_params,
+            business_unit_value=unit_val,
+            audience_size=aud_size,
         )
         wstate.advance()
 
@@ -636,3 +648,34 @@ def _render_why_settings(hint: dict, voice: str) -> None:
     with st.expander(copy.step3_why_settings(voice), expanded=False):
         for p in parts:
             st.markdown(p, unsafe_allow_html=True)
+
+
+def _render_business_impact_inputs(voice: str, key_suffix: str) -> tuple[float | None, int | None]:
+    st.markdown("<div style='height:1.25rem'></div>", unsafe_allow_html=True)
+    
+    label = "Business Impact Simulation (Optional)" if voice == "plain" else "Decision Intelligence / ROI (Optional)"
+    with st.expander(label, expanded=False):
+        helper_caption(
+            "Map your primary metric to dollars to simulate the expected ROI and Risk of a full rollout."
+        )
+        c1, c2 = st.columns(2)
+        with c1:
+            unit_val = st.number_input(
+                "Value per unit ($)",
+                min_value=0.0,
+                value=0.0,
+                step=1.0,
+                help="e.g. 50 if one conversion is worth $50.",
+                key=f"bui_val_{key_suffix}",
+            )
+        with c2:
+            aud_size = st.number_input(
+                "Total Audience Size",
+                min_value=0,
+                value=0,
+                step=1000,
+                help="How many users would be affected if you roll this out to 100%?",
+                key=f"bui_aud_{key_suffix}",
+            )
+        
+        return float(unit_val) if unit_val > 0 else None, int(aud_size) if aud_size > 0 else None

@@ -60,6 +60,21 @@ class FrequentistABTest(Method):
         pooled_sd = np.sqrt(((n_c - 1) * var_c + (n_t - 1) * var_t) / max(n_c + n_t - 2, 1))
         cohen_d = float(lift_abs / pooled_sd) if pooled_sd > 0 else 0.0
 
+        # Phase E: Decision Intelligence (Expected Loss / Impact)
+        expected_loss_money = None
+        expected_impact_money = None
+        if config.business_unit_value is not None:
+            multiplier = config.business_unit_value * (config.audience_size or 1)
+            # Expected value of max(0, -X) where X ~ N(lift_abs, se)
+            if se > 0:
+                ratio = -lift_abs / se
+                exp_loss_abs = -lift_abs * norm.cdf(ratio) + se * norm.pdf(ratio)
+            else:
+                exp_loss_abs = max(0, -lift_abs)
+            
+            expected_loss_money = float(exp_loss_abs * multiplier)
+            expected_impact_money = float(lift_abs * multiplier)
+
         return MetricResult(
             metric_name=col,
             control_mean=mu_c,
@@ -74,6 +89,8 @@ class FrequentistABTest(Method):
             n_treatment=int(n_t),
             test_statistic=float(t_stat),
             effect_size=cohen_d,
+            expected_loss=expected_loss_money,
+            expected_impact=expected_impact_money,
         )
 
     def _analyze_ratio(self, data: pl.DataFrame, rm: Any, config: ExperimentConfig) -> MetricResult:
@@ -110,6 +127,20 @@ class FrequentistABTest(Method):
         z_stat = lift_abs / se if se != 0 else 0.0
         p_val = 2 * (1 - norm.cdf(abs(z_stat))) if se != 0 else 1.0
 
+        # Phase E: Decision Intelligence (Expected Loss / Impact)
+        expected_loss_money = None
+        expected_impact_money = None
+        if config.business_unit_value is not None:
+            multiplier = config.business_unit_value * (config.audience_size or 1)
+            if se > 0:
+                ratio = -lift_abs / se
+                exp_loss_abs = -lift_abs * norm.cdf(ratio) + se * norm.pdf(ratio)
+            else:
+                exp_loss_abs = max(0, -lift_abs)
+            
+            expected_loss_money = float(exp_loss_abs * multiplier)
+            expected_impact_money = float(lift_abs * multiplier)
+
         return MetricResult(
             metric_name=rm.name,
             metric_type="ratio",
@@ -124,6 +155,8 @@ class FrequentistABTest(Method):
             n_control=int(df_c.height),
             n_treatment=int(df_t.height),
             test_statistic=float(z_stat),
+            expected_loss=expected_loss_money,
+            expected_impact=expected_impact_money,
         )
 
     def diagnostics(self, data: pl.DataFrame, config: ExperimentConfig) -> Dict[str, Any]:

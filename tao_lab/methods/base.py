@@ -44,6 +44,10 @@ class ExperimentConfig(BaseModel):
     expected_ratio: Dict[Union[str, int, float], float] = Field(default_factory=lambda: {"control": 0.5, "treatment": 0.5})
     alpha: float = 0.05
     method_params: Dict[str, Any] = Field(default_factory=dict, description="Method-specific hyperparams")
+    
+    # ── Phase E: Decision Intelligence ──
+    business_unit_value: Optional[float] = Field(default=None, description="Monetary value of one unit of the primary metric")
+    audience_size: Optional[int] = Field(default=None, description="Total audience size to simulate full rollout impact")
 
 class MetricResult(BaseModel):
     metric_name: str
@@ -63,6 +67,10 @@ class MetricResult(BaseModel):
     test_statistic: Optional[float] = None  # t-stat (Welch), z-proxy (ratios), P(better) (Bayesian)
     effect_size: Optional[float] = None     # Cohen's d for continuous
     p_value_adjusted: Optional[float] = None  # set by Benjamini-Hochberg correction
+    
+    # ── Phase E: Decision Intelligence ──
+    expected_loss: Optional[float] = None    # Bayesian Expected Loss (Risk)
+    expected_impact: Optional[float] = None  # Expected Lift (Reward) in absolute units
 
 class AnalysisResult(BaseModel):
     method_name: str

@@ -82,6 +82,26 @@ class TimeSeriesIntervention(Method):
             n_treatment=n_post,
         )
 
+        # Phase E: Decision Intelligence (Expected Loss / Impact)
+        expected_loss_money = None
+        expected_impact_money = None
+        if config.business_unit_value is not None:
+            multiplier = config.business_unit_value * (config.audience_size or 1)
+            # Simplified for MVP since CI is mocked
+            se = abs(lift_abs * 1.2 - lift_abs * 0.8) / (2 * 1.96)
+            import scipy.stats as stats
+            if se > 0:
+                ratio = -lift_abs / se
+                exp_loss_abs = -lift_abs * stats.norm.cdf(ratio) + se * stats.norm.pdf(ratio)
+            else:
+                exp_loss_abs = max(0, -lift_abs)
+                
+            expected_loss_money = float(exp_loss_abs * multiplier)
+            expected_impact_money = float(lift_abs * multiplier)
+            
+            metric_res.expected_loss = expected_loss_money
+            metric_res.expected_impact = expected_impact_money
+
         return AnalysisResult(
             method_name="Time-Series Intervention (CausalPy)",
             metrics=[metric_res],

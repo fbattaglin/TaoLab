@@ -110,6 +110,7 @@ def render() -> None:
 
     with hero_right:
         _render_key_numbers_card(result, p, voice)
+        _render_decision_intelligence_card(result, p, voice)
         st.markdown("<div style='height:.5rem'></div>", unsafe_allow_html=True)
         _render_export_rail(s)
 
@@ -252,6 +253,88 @@ def _render_key_numbers_card(
         unsafe_allow_html=True,
     )
 
+def _render_decision_intelligence_card(result: AnalysisResult, prescription: PrescriptionNarration, voice: str) -> None:
+    primary = next((m for m in result.metrics if m.is_significant), result.metrics[0] if result.metrics else None)
+    if not primary or primary.expected_loss is None or primary.expected_impact is None:
+        return
+        
+    exp_loss = primary.expected_loss
+    exp_impact = primary.expected_impact
+    
+    st.markdown(
+        f"<div class='tl-text-deep' style='font-weight:600;font-size:.95rem;text-transform:uppercase;letter-spacing:.05em;"
+        f"margin:1.5rem 0 .5rem;'>Decision Intelligence</div>",
+        unsafe_allow_html=True,
+    )
+    
+    # Financial Impact Card
+    loss_color = "#DC2626"
+    impact_color = "#059669" if exp_impact >= 0 else "#DC2626"
+    
+    impact_str = f"${exp_impact:,.0f}"
+    loss_str = f"${exp_loss:,.0f}"
+    
+    st.markdown(
+        f"""<div class="tl-card" style="padding:1.25rem 1.5rem;margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+             <div>
+               <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tl-slate);font-weight:600;margin-bottom:.2rem;">
+                 Expected Impact
+               </div>
+               <div style="font-size:1.4rem;font-weight:700;color:{impact_color};">
+                 {impact_str}
+               </div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--tl-slate);font-weight:600;margin-bottom:.2rem;">
+                 Risk Exposure
+               </div>
+               <div style="font-size:1.4rem;font-weight:700;color:{loss_color};">
+                 {loss_str}
+               </div>
+             </div>
+          </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+    
+    # For technical voice, show the slider to override the verdict based on risk tolerance
+    if voice == "technical":
+        st.markdown(
+            f"<div style='font-size:.85rem;color:var(--tl-slate);margin-bottom:.5rem;'>"
+            f"Set your acceptable risk threshold to override the statistical verdict.</div>",
+            unsafe_allow_html=True,
+        )
+        max_slider_val = max(100.0, exp_loss * 5.0 if exp_loss > 0 else 1000.0)
+        acceptable_risk = st.slider(
+            "Acceptable Risk ($)",
+            min_value=0.0,
+            max_value=float(max_slider_val),
+            value=float(max_slider_val * 0.1),
+            step=float(max_slider_val / 100.0),
+            key="acceptable_risk_slider"
+        )
+        
+        if exp_impact <= 0:
+            custom_verdict = "dont_ship"
+            custom_text = "Kill (Negative Impact)"
+        elif exp_loss <= acceptable_risk:
+            custom_verdict = "ship"
+            custom_text = "Ship (Risk is acceptable)"
+        else:
+            custom_verdict = "hold"
+            custom_text = "Hold (Risk exceeds threshold)"
+            
+        color = _VERDICT_COLOR[custom_verdict]
+        st.markdown(
+            f"""<div style="padding:.75rem;border-left:4px solid {color};background:#F8FAFC;margin-top:.5rem;">
+              <span style="font-size:.8rem;color:var(--tl-slate);text-transform:uppercase;letter-spacing:.05em;">
+                Risk-Adjusted Verdict:
+              </span>
+              <strong style="color:{color};margin-left:.5rem;font-size:.9rem;">{custom_text}</strong>
+            </div>""",
+            unsafe_allow_html=True
+        )
 
 # ─────────────────────────── HTE section ───────────────────────────
 def _render_hte_section(

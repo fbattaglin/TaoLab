@@ -76,6 +76,27 @@ class CausalInference(Method):
             is_significant=not (ate_interval[0] < 0 < ate_interval[1])
         )
 
+        # Phase E: Decision Intelligence (Expected Loss / Impact)
+        expected_loss_money = None
+        expected_impact_money = None
+        if config.business_unit_value is not None:
+            multiplier = config.business_unit_value * (config.audience_size or 1)
+            import scipy.stats as stats
+            z_val = stats.norm.ppf(1 - config.alpha / 2)
+            se = (ate_interval[1] - ate_interval[0]) / (2 * z_val) if z_val > 0 else 0
+            
+            if se > 0:
+                ratio = -float(ate) / se
+                exp_loss_abs = -float(ate) * stats.norm.cdf(ratio) + se * stats.norm.pdf(ratio)
+            else:
+                exp_loss_abs = max(0, -float(ate))
+            
+            expected_loss_money = float(exp_loss_abs * multiplier)
+            expected_impact_money = float(float(ate) * multiplier)
+            
+            metric_res.expected_loss = expected_loss_money
+            metric_res.expected_impact = expected_impact_money
+
         # ── HTE (optional — CausalForestDML) ──
         hte_result = None
         if config.method_params.get("hte_enabled") and common_causes:

@@ -66,6 +66,17 @@ class BayesianABTest(Method):
             rope_threshold = config.method_params.get("rope_threshold", 0.001)
             prob_in_rope = float(np.mean(np.abs(lift_rel_samples) < rope_threshold))
 
+            # Phase E: Decision Intelligence (Expected Loss / Impact)
+            loss_samples = np.maximum(0, samples["mu_c"] - samples["mu_t"])
+            expected_loss_abs = float(np.mean(loss_samples))
+            
+            expected_loss_money = None
+            expected_impact_money = None
+            if config.business_unit_value is not None:
+                multiplier = config.business_unit_value * (config.audience_size or 1)
+                expected_loss_money = expected_loss_abs * multiplier
+                expected_impact_money = lift_abs_mean * multiplier
+
             results.append(MetricResult(
                 metric_name=metric,
                 control_mean=mu_c_mean,
@@ -80,6 +91,8 @@ class BayesianABTest(Method):
                 n_control=int(len(ctrl)),
                 n_treatment=int(len(treat)),
                 test_statistic=float(prob_better),
+                expected_loss=expected_loss_money,
+                expected_impact=expected_impact_money,
             ))
             
             diagnostics[f"{metric}_samples"] = {

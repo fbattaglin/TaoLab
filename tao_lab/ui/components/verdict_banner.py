@@ -45,24 +45,41 @@ def render_verdict(
 
 
 _FALLBACK_STYLES = {
-    "ship": ("#059669", "Ship it."),
-    "hold": ("#D97706", "Hold."),
-    "dont_ship": ("#DC2626", "Don't ship."),
+    "ship": ("#059669", "Ship it.", "M9 12.75 11.25 15 15 9.75"),
+    "hold": ("#D97706", "Hold.", "M10 9v6m4-6v6"),
+    "dont_ship": ("#DC2626", "Don't ship.", "M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728"),
 }
+
+# Minimal SVG icon paths (24×24 viewBox, stroke-based, matching Lucide style):
+#   ship    → checkmark (M9 12.75 11.25 15 15 9.75)
+#   hold    → pause bars (M10 9v6m4-6v6)
+#   dont_ship → X cross (two diagonal lines)
 
 
 def _render_fallback(state: VerdictState, headline: str, subtitle: Optional[str]) -> None:
-    color, label = _FALLBACK_STYLES.get(state, ("#475569", state))
+    color, label, icon_path = _FALLBACK_STYLES.get(state, ("#475569", state, ""))
     sub_html = (
         f"<div style='margin-top:.5rem;color:var(--tl-slate);font-size:.9rem;'>{subtitle}</div>"
         if subtitle else ""
     )
+    icon_html = (
+        f"<div style='flex:none;width:3rem;height:3rem;border-radius:50%;"
+        f"background:{color}12;display:flex;align-items:center;justify-content:center;'>"
+        f"<svg width='24' height='24' viewBox='0 0 24 24' fill='none' "
+        f"stroke='{color}' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'>"
+        f"<circle cx='12' cy='12' r='10' stroke-width='1.5' opacity='.35'/>"
+        f"<path d='{icon_path}'/>"
+        f"</svg></div>"
+    ) if icon_path else ""
     st.markdown(
         f"""
-        <div class="tl-card" style="border-left:4px solid {color};">
-          <div style="font-size:1.4rem;font-weight:600;color:{color};">{label}</div>
-          <div style="margin-top:.4rem;color:var(--tl-indigo-ink);">{headline}</div>
-          {sub_html}
+        <div class="tl-card" style="border-left:4px solid {color};display:flex;align-items:flex-start;gap:1.1rem;">
+          {icon_html}
+          <div style="min-width:0;">
+            <div style="font-size:1.4rem;font-weight:600;color:{color};">{label}</div>
+            <div style="margin-top:.4rem;color:var(--tl-indigo-ink);">{headline}</div>
+            {sub_html}
+          </div>
         </div>
         """,
         unsafe_allow_html=True,

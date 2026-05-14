@@ -652,6 +652,63 @@ def compute_data_health_score(
             detail=f"Worst column has {worst_extreme:.1%} extreme values — heavy tails.",
         ))
 
+    # ── Variance Stability (Phase E) ──
+    cv_fracs = []
+    for col in df.columns:
+        if not df.schema[col].is_numeric():
+            continue
+        try:
+            arr = df.select(pl.col(col).cast(pl.Float64)).drop_nulls().to_series()
+            if arr.len() < 10:
+                continue
+            mean = arr.mean()
+            std = arr.std()
+            if mean is None or std is None or mean == 0:
+                continue
+            cv = abs(std / mean)
+            cv_fracs.append(cv)
+        except Exception:  # noqa: BLE001
+            continue
+    worst_cv = max(cv_fracs) if cv_fracs else 0.0
+    if worst_cv < 3.0:
+        dims.append(HealthDimension(
+            key="variance", label="Variance stability", score=100, status="pass",
+            detail="Numeric columns have stable variance (CV < 3).",
+        ))
+    elif worst_cv < 10.0:
+        dims.append(HealthDimension(
+            key="variance", label="Variance stability", score=70, status="warn",
+            detail=f"High variance detected (max CV = {worst_cv:.1f}). Consider log-transform or CUPED.",
+        ))
+    else:
+        dims.append(HealthDimension(
+            key="variance", label="Variance stability", score=30, status="fail",
+            detail=f"Extreme variance detected (max CV = {worst_cv:.1f}). Tests will be underpowered.",
+        ))
+
+    # ── Novelty Effect Risk (Phase E) ──
+    has_date = False
+    for col in df.columns:
+        dtype = df.schema[col]
+        if dtype in (pl.Date, pl.Datetime):
+            has_date = True
+            break
+        elif dtype == pl.Utf8:
+            if _try_parse_date_col(df[col]) is not None:
+                has_date = True
+                break
+            
+    if has_date:
+        dims.append(HealthDimension(
+            key="novelty", label="Time-based effects", score=80, status="warn",
+            detail="Time column detected. Watch out for novelty effects (early spikes that fade).",
+        ))
+    else:
+        dims.append(HealthDimension(
+            key="novelty", label="Time-based effects", score=50, status="warn",
+            detail="No time column detected. Cannot check for novelty effects or day-of-week seasonality.",
+        ))
+
     overall = round(sum(d.score for d in dims) / max(len(dims), 1))
     if overall >= 85:
         status = "pass"

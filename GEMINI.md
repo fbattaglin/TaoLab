@@ -68,7 +68,7 @@ Every statistical analysis is a "plugin" inheriting from `tao_lab.methods.base.M
 -   **Lazy Imports**: Heavy libraries (NumPyro, JAX, CausalPy, DoWhy) **MUST** be imported inside `fit()` or `visualize()` to keep the UI responsive.
 
 ### 4. UI & Communication
--   **Dual-Audience**: The app serves "Plain" (business) and "Technical" (DS) registers.
+-   **Dual-Audience**: The app serves "Signal" (business) and "Spectrum" (DS) registers.
 -   **Voice Threading**: Use `CopyPair` and `GlossaryEntry` from `tao_lab/ui/strings.py`. Never hard-code English strings for UI labels.
 -   **Forced Light Mode**: Aesthetics are locked to a high-contrast light mode (see `tao_lab/ui/static/style.css`).
 

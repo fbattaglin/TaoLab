@@ -5,10 +5,10 @@ Streamlit drag-drop uploader styled into a drop zone, and a per-column health
 snapshot once data is loaded.
 
 Phase 4 additions:
-* Voice-aware sample chips (plain blurbs frame the business question,
-  technical blurbs show dataset specs).
+* Voice-aware sample chips (signal blurbs frame the business question,
+  spectrum blurbs show dataset specs).
 * Optional "What are you trying to learn?" question field.
-* Plain-language dataset summary below the column snapshot.
+* Signal-language dataset summary below the column snapshot.
 """
 
 from __future__ import annotations
@@ -31,16 +31,16 @@ _SAMPLE_CHIPS = [
     {
         "key": "ab_saas",
         "label": "SaaS onboarding A/B",
-        "blurb_plain": "Did a new onboarding flow increase activation and revenue?",
-        "blurb_technical": "30k users · lognormal revenue + pages/session ratio · 2 covariates",
+        "blurb_signal": "Did a new onboarding flow increase activation and revenue?",
+        "blurb_spectrum": "30k users · lognormal revenue + pages/session ratio · 2 covariates",
         "scenario": "Your product team shipped a redesigned onboarding. Half of new signups saw it.",
         "file": "ab_test_saas.csv",
     },
     {
         "key": "ab_email",
         "label": "Email small-N (Bayesian)",
-        "blurb_plain": "Too little data to be sure — was a personalised subject line worth it?",
-        "blurb_technical": "600 users · freq. p=0.16 · Bayesian P(open) ≈ 92% · small-N showcase",
+        "blurb_signal": "Too little data to be sure — was a personalised subject line worth it?",
+        "blurb_spectrum": "600 users · freq. p=0.16 · Bayesian P(open) ≈ 92% · small-N showcase",
         "scenario": (
             "You ran a beta on 600 subscribers. "
             "The t-test says 'not significant'. Bayesian posterior disagrees."
@@ -50,8 +50,8 @@ _SAMPLE_CHIPS = [
     {
         "key": "ts_retail",
         "label": "Loyalty programme launch",
-        "blurb_plain": "Did launching a loyalty programme permanently lift weekly sales?",
-        "blurb_technical": "104 weeks · AR(1) + holiday seasonal · 52/52 pre/post · +12% step",
+        "blurb_signal": "Did launching a loyalty programme permanently lift weekly sales?",
+        "blurb_spectrum": "104 weeks · AR(1) + holiday seasonal · 52/52 pre/post · +12% step",
         "scenario": "Your loyalty rewards programme went live on January 2, 2023. Two years of weekly data — did it move the needle?",
         "file": "time_series_weekly.csv",
         "hints": {
@@ -62,8 +62,8 @@ _SAMPLE_CHIPS = [
     {
         "key": "causal_401k",
         "label": "401k savings (causal)",
-        "blurb_plain": "Does joining a savings plan really increase wealth, or do savers just start richer?",
-        "blurb_technical": "9k rows · DML · income + age + education confounders · ATE ≈ $9k",
+        "blurb_signal": "Does joining a savings plan really increase wealth, or do savers just start richer?",
+        "blurb_spectrum": "9k rows · DML · income + age + education confounders · ATE ≈ $9k",
         "scenario": (
             "People who enroll in 401k plans tend to earn more already. "
             "Use causal inference to isolate the plan's true effect."
@@ -73,16 +73,16 @@ _SAMPLE_CHIPS = [
     {
         "key": "ab_bandit",
         "label": "Bandit Replay Simulator",
-        "blurb_plain": "A clear winner emerged early. How much traffic did the 50/50 split waste?",
-        "blurb_technical": "45 days · 27k rows · strong signal (p<0.01) · perfect for Thompson Sampling replay",
+        "blurb_signal": "A clear winner emerged early. How much traffic did the 50/50 split waste?",
+        "blurb_spectrum": "45 days · 27k rows · strong signal (p<0.01) · perfect for Thompson Sampling replay",
         "scenario": "You ran an A/B test for 45 days. The treatment was clearly better. Could dynamic allocation have saved time and conversions?",
         "file": "ab_test_bandit.csv",
     },
     {
         "key": "causal_hte",
         "label": "Pricing Promo (HTE)",
-        "blurb_plain": "The overall promo effect looks flat, but did it work for loyal customers?",
-        "blurb_technical": "12k rows · ATE ≈ 0 · strong CATE on tenure_months · CausalForestDML showcase",
+        "blurb_signal": "The overall promo effect looks flat, but did it work for loyal customers?",
+        "blurb_spectrum": "12k rows · ATE ≈ 0 · strong CATE on tenure_months · CausalForestDML showcase",
         "scenario": "A 20% discount promo was given to a mix of users. Overall revenue didn't budge. Who actually benefited?",
         "file": "causal_pricing_hte.csv",
     },
@@ -158,7 +158,7 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
         for row_chips in [_SAMPLE_CHIPS[:2], _SAMPLE_CHIPS[2:4], _SAMPLE_CHIPS[4:]]:
             chip_cols = st.columns(len(row_chips), gap="small")
             for slot, chip in zip(chip_cols, row_chips):
-                blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]
+                blurb = chip["blurb_signal"] if voice == "signal" else chip["blurb_spectrum"]
                 with slot:
                     if st.button(
                         chip["label"],
@@ -234,8 +234,8 @@ def _render_loaded(s: wstate.WizardState, *, voice: Voice) -> None:
             s.diagnosis = None
             st.rerun()
 
-    # ── Plain-language dataset summary ──
-    if voice == "plain":
+    # ── Signal-language dataset summary ──
+    if voice == "signal":
         assignment_guess = _guess_assignment_col(df)
         summary = _dataset_summary(df, assignment_guess)
         st.markdown(
@@ -281,7 +281,7 @@ def _guess_assignment_col(df: pl.DataFrame) -> str | None:
 
 
 def _dataset_summary(df: pl.DataFrame, assignment_col: str | None) -> str:
-    """Build a plain-language summary of the dataset for non-technical users."""
+    """Build a signal-language summary of the dataset for business users."""
     parts = [f"<strong>{df.height:,} rows × {df.width} columns.</strong>"]
 
     # Guess "one row per..."

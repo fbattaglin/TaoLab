@@ -3,7 +3,7 @@
 Executes the chosen method against the captured config and stashes
 `(result, narration, method_visuals)` on the wizard state.
 
-Phase 4: progressive, voice-aware check descriptions with plain-language
+Phase 4: progressive, voice-aware check descriptions with signal-language
 results after each step.
 """
 
@@ -56,12 +56,12 @@ def _execute(s: wstate.WizardState) -> None:
             st.write(copy.step4_progress_fit(voice))
         result = method.fit(s.df, s.config)
 
-        # ── SRM check result (plain-language) ──
+        # ── SRM check result (signal-language) ──
         _show_srm_result(result, voice)
 
         # ── Fit result summary ──
         n_sig = sum(1 for m in result.metrics if m.is_significant)
-        if voice == "plain":
+        if voice == "signal":
             st.write(
                 f"✓ Effect estimated across {len(result.metrics)} "
                 f"metric{'s' if len(result.metrics) != 1 else ''}"
@@ -111,7 +111,7 @@ def _execute(s: wstate.WizardState) -> None:
         st.write(copy.step4_progress_narrate(voice))
         prescription = build_prescription(result, bandit_replay=bandit_result)
 
-        if voice == "plain":
+        if voice == "signal":
             status.update(label="Analysis complete!", state="complete")
         else:
             status.update(label="Analysis Complete!", state="complete")
@@ -127,7 +127,7 @@ def _execute(s: wstate.WizardState) -> None:
 def _show_srm_result(result, voice: Voice) -> None:
     """Show a one-line SRM result after the fit."""
     if result.srm_detected:
-        if voice == "plain":
+        if voice == "signal":
             st.write(
                 f"⚠ {copy.step5_srm_fail(voice)} — "
                 f"this usually points to a bug upstream"
@@ -137,7 +137,7 @@ def _show_srm_result(result, voice: Voice) -> None:
                 f"⚠ {copy.step5_srm_fail(voice)} · p = {result.srm_p_value:.4g}"
             )
     else:
-        if voice == "plain":
+        if voice == "signal":
             st.write(f"✓ {copy.step5_srm_pass(voice)}")
         else:
             st.write(

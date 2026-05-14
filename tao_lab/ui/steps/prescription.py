@@ -46,23 +46,23 @@ _VERDICT_COLOR = {
 # ── Method-specific plot explanations ──────────────────────────────────────────
 _PLOT_EXPLANATIONS: dict[str, CopyPair] = {
     "Bayesian A/B Test": CopyPair(
-        plain=(
+        signal=(
             "This curve shows all the values the true effect could plausibly take. "
             "The shaded region is where we're 95% confident the real answer lies. "
             "More area to the right of zero means more confidence the treatment is better."
         ),
-        technical=(
+        spectrum=(
             "Posterior distribution of relative lift (MCMC, NumPyro). "
             "Shaded region = 95% Highest Density Interval (HDI). "
             "Area right of x=0 = P(lift > 0) — the probability the treatment strictly dominates."
         ),
     ),
     "Causal Inference": CopyPair(
-        plain=(
+        signal=(
             "This chart checks whether people who received the treatment were similar enough "
             "to those who didn't. Good overlap between the two groups means we can trust the causal estimate."
         ),
-        technical=(
+        spectrum=(
             "Propensity score overlap plot (positivity check). "
             "Distributional overlap between treated/control validates the positivity assumption "
             "required for causal identification. Thin tails or no overlap = estimates unreliable."
@@ -71,8 +71,8 @@ _PLOT_EXPLANATIONS: dict[str, CopyPair] = {
 }
 
 _DEFAULT_PLOT_EXPLANATION = CopyPair(
-    plain="This chart shows method-specific diagnostic information.",
-    technical="Method diagnostic plot.",
+    signal="This chart shows method-specific diagnostic information.",
+    spectrum="Method diagnostic plot.",
 )
 
 
@@ -99,7 +99,7 @@ def render() -> None:
     hero_left, hero_right = st.columns([3, 2], gap="large")
 
     with hero_left:
-        headline = p.headline.plain if voice == "plain" else p.headline.technical
+        headline = p.headline.signal if voice == "signal" else p.headline.spectrum
         subtitle = (
             f"{_CONFIDENCE_LABEL[p.confidence]} · "
             f"{int(p.confidence_score * 100)}/100 confidence"
@@ -182,11 +182,11 @@ def _render_action_bar(s: wstate.WizardState) -> None:
     """Single flex row: method name + SRM badge. No column layout, no buttons."""
     result = s.result
     badge_color = "var(--tl-danger)" if result.srm_detected else "var(--tl-success)"
-    if s.voice == "plain":
+    if s.voice == "signal":
         badge_text = (
-            f"⚠ {copy.step5_srm_fail('plain')}"
+            f"⚠ {copy.step5_srm_fail('signal')}"
             if result.srm_detected
-            else f"✓ {copy.step5_srm_pass('plain')}"
+            else f"✓ {copy.step5_srm_pass('signal')}"
         )
     else:
         badge_text = (
@@ -304,7 +304,7 @@ def _render_decision_intelligence_card(result: AnalysisResult, prescription: Pre
     )
     
     # For technical voice, show the slider to override the verdict based on risk tolerance
-    if voice == "technical":
+    if voice == "spectrum":
         st.markdown(
             f"<div style='font-size:.85rem;color:var(--tl-slate);margin-bottom:.5rem;'>"
             f"Set your acceptable risk threshold to override the statistical verdict.</div>",
@@ -362,9 +362,9 @@ def _render_hte_section(
     # ── HTE narration ──
     if prescription.hte_summary is not None:
         hte_text = (
-            prescription.hte_summary.plain
-            if voice == "plain"
-            else prescription.hte_summary.technical
+            prescription.hte_summary.signal
+            if voice == "signal"
+            else prescription.hte_summary.spectrum
         )
         st.markdown(
             f"<div style='font-size:.92rem;line-height:1.55;color:var(--tl-slate);"
@@ -539,9 +539,9 @@ def _render_bandit_section(
     # ── Narration ──
     if prescription.bandit_summary is not None:
         narr_text = (
-            prescription.bandit_summary.plain
-            if voice == "plain"
-            else prescription.bandit_summary.technical
+            prescription.bandit_summary.signal
+            if voice == "signal"
+            else prescription.bandit_summary.spectrum
         )
         st.markdown(
             f"<div style='font-size:.92rem;line-height:1.55;color:#0F172A;"
@@ -709,7 +709,7 @@ def _render_bandit_key_numbers(br, voice: str) -> None:
     else:
         conv_val = "—"
 
-    # Helper captions only in plain mode
+    # Helper captions only in signal mode
     dur_help = copy.step5_bandit_duration_help(voice)
     saved_help = copy.step5_bandit_saved_help(voice)
     conv_help = copy.step5_bandit_convergence_help(voice)

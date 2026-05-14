@@ -1,7 +1,7 @@
 """Structured narrator for the Prescription step.
 
 Produces a `PrescriptionNarration` — the canonical artefact the UI renders.
-Two registers (`plain`, `technical`) are produced for every text field so
+Two registers (`signal`, `spectrum`) are produced for every text field so
 the user-facing voice toggle never re-runs the analysis.
 
 Strategy:
@@ -38,13 +38,13 @@ Severity = Literal["info", "warning", "critical"]
 class CaveatItem(BaseModel):
     severity: Severity
     title: str
-    body_plain: str
-    body_technical: str
+    body_signal: str
+    body_spectrum: str
 
 
 class TextPair(BaseModel):
-    plain: str
-    technical: str
+    signal: str
+    spectrum: str
 
 
 class PrescriptionNarration(BaseModel):
@@ -58,8 +58,8 @@ class PrescriptionNarration(BaseModel):
     recommendation: TextPair
     reasoning: TextPair
     caveats: List[CaveatItem] = Field(default_factory=list)
-    next_steps_plain: List[str] = Field(default_factory=list)
-    next_steps_technical: List[str] = Field(default_factory=list)
+    next_steps_signal: List[str] = Field(default_factory=list)
+    next_steps_spectrum: List[str] = Field(default_factory=list)
     hte_summary: Optional[TextPair] = None  # populated when HTE results exist
     bandit_summary: Optional[TextPair] = None  # populated when MAB replay ran
 
@@ -78,7 +78,7 @@ class Narrator:
         should call `build_prescription(result)` directly.
         """
         prescription = build_prescription(result, api_key=self.api_key)
-        return render_markdown(prescription, voice="plain")
+        return render_markdown(prescription, voice="signal")
 
 
 def build_prescription(
@@ -123,7 +123,7 @@ def _template_prescription(
     recommendation = _build_recommendation(verdict, primary, result)
     reasoning = _build_reasoning(primary, result)
     caveats = _build_caveats(result, primary)
-    next_plain, next_tech = _build_next_steps(verdict, result, primary)
+    next_signal, next_spec = _build_next_steps(verdict, result, primary)
 
     hte_summary = None
     if result.hte is not None:
@@ -142,8 +142,8 @@ def _template_prescription(
         recommendation=recommendation,
         reasoning=reasoning,
         caveats=caveats,
-        next_steps_plain=next_plain,
-        next_steps_technical=next_tech,
+        next_steps_signal=next_signal,
+        next_steps_spectrum=next_spec,
         hte_summary=hte_summary,
         bandit_summary=bandit_summary,
     )
@@ -216,46 +216,46 @@ def _build_headline(
 ) -> TextPair:
     if primary is None:
         return TextPair(
-            plain="No metric was returned. Re-check your configuration.",
-            technical="result.metrics is empty.",
+            signal="No metric was returned. Re-check your configuration.",
+            spectrum="result.metrics is empty.",
         )
     m = primary.metric
     sign = primary.direction
 
-    # ── Plain: business language, absolute numbers, no jargon ──
-    direction_plain = {"up": "more", "down": "less", "flat": "about the same"}[sign]
+    # ── Signal: business language, absolute numbers, no jargon ──
+    direction_signal = {"up": "more", "down": "less", "flat": "about the same"}[sign]
     if sign == "flat":
-        plain = (
+        signal = (
             f"The groups performed about the same on {m.metric_name} "
             f"(treatment: {m.treatment_mean:.4g}, control: {m.control_mean:.4g})."
         )
     else:
-        plain = (
-            f"The treatment group had {abs(m.lift_absolute):.4g} {direction_plain} "
+        signal = (
+            f"The treatment group had {abs(m.lift_absolute):.4g} {direction_signal} "
             f"{m.metric_name} on average ({m.treatment_mean:.4g} vs {m.control_mean:.4g}, "
             f"{_fmt_pct(m.lift_relative)})."
         )
 
-    # ── Technical: unchanged precision, full statistical shorthand ──
+    # ── Spectrum: unchanged precision, full statistical shorthand ──
     p_eff = _effective_p(m)
     if p_eff is None:
         direction_word = {"up": "increased", "down": "decreased", "flat": "did not move"}[sign]
-        tech = (
+        spec = (
             f"Treatment {direction_word} {m.metric_name} by {_fmt_pct(m.lift_relative)}."
         )
     else:
         p_label = "p (adj)" if m.p_value_adjusted is not None else "p"
-        tech_extra = ""
+        spec_extra = ""
         if m.test_statistic is not None:
-            tech_extra += f", stat = {m.test_statistic:.3g}"
+            spec_extra += f", stat = {m.test_statistic:.3g}"
         if m.effect_size is not None and m.effect_size != 0:
-            tech_extra += f", Cohen's d = {m.effect_size:.3g}"
-        tech = (
+            spec_extra += f", Cohen's d = {m.effect_size:.3g}"
+        spec = (
             f"Treatment Δ {m.metric_name} = {m.lift_absolute:.4g} "
             f"({_fmt_pct(m.lift_relative)}); 95% CI [{m.ci_lower:.3g}, {m.ci_upper:.3g}]; "
-            f"{p_label} = {p_eff:.4g}{tech_extra}."
+            f"{p_label} = {p_eff:.4g}{spec_extra}."
         )
-    return TextPair(plain=plain, technical=tech)
+    return TextPair(signal=signal, spectrum=spec)
 
 
 def _build_diagnosis(
@@ -265,64 +265,64 @@ def _build_diagnosis(
     method = result.method_name
     sig_count = sum(1 for m in result.metrics if m.is_significant)
 
-    # ── Plain: lead with the finding, then context ──
-    plain_parts = []
+    # ── Signal: lead with the finding, then context ──
+    signal_parts = []
     if primary is not None:
         m = primary.metric
         if m.is_significant and primary.direction == "up":
-            plain_parts.append(
+            signal_parts.append(
                 f"The data shows a real difference on {m.metric_name} — "
                 f"the group that got the change performed measurably better."
             )
         elif m.is_significant and primary.direction == "down":
-            plain_parts.append(
+            signal_parts.append(
                 f"The data shows a real difference on {m.metric_name} — "
                 f"the group that got the change performed measurably worse."
             )
         else:
-            plain_parts.append(
+            signal_parts.append(
                 f"The data doesn't show a clear difference on {m.metric_name}. "
                 f"The observed gap could easily be due to normal variation."
             )
 
     if n_metrics > 1:
         if sig_count == 0:
-            plain_parts.append(
+            signal_parts.append(
                 f"None of the {n_metrics} metrics showed a clear difference."
             )
         elif sig_count == n_metrics:
-            plain_parts.append(
+            signal_parts.append(
                 f"All {n_metrics} metrics showed a real difference."
             )
         else:
-            plain_parts.append(
+            signal_parts.append(
                 f"Of {n_metrics} metrics tested, {sig_count} showed a real difference "
                 f"(after adjusting for multiple comparisons)."
             )
     if result.srm_detected:
-        plain_parts.append(
+        signal_parts.append(
             "However, the groups aren't sized the way they should be — that usually "
             "points to an assignment or logging bug and undermines every result below."
         )
 
-    plain = " ".join(plain_parts) or "No diagnosis available."
+    signal = " ".join(signal_parts) or "No diagnosis available."
 
-    # ── Technical: unchanged ──
-    tech_parts = [f"Method: {method}.", f"n_metrics = {n_metrics}, sig = {sig_count}."]
+    # ── Spectrum: unchanged ──
+    spec_parts = [f"Method: {method}.", f"n_metrics = {n_metrics}, sig = {sig_count}."]
     if primary is not None and primary.metric.p_value is not None:
         m = primary.metric
-        tech_parts.append(
+        spec_parts.append(
             f"Primary metric '{m.metric_name}': lift_abs = {m.lift_absolute:.4g}, "
             f"lift_rel = {m.lift_relative:.4g}, p = {m.p_value:.4g}, "
             f"CI = [{m.ci_lower:.4g}, {m.ci_upper:.4g}]."
         )
     if result.srm_detected:
-        tech_parts.append(
+        spec_parts.append(
             f"SRM χ² test rejected at p = {result.srm_p_value:.4g} (< 0.001)."
         )
-    tech = " ".join(tech_parts)
+    spec = " ".join(spec_parts)
 
-    return TextPair(plain=plain, technical=tech)
+    return TextPair(signal=signal, spectrum=spec)
 
 
 def _build_recommendation(
@@ -332,12 +332,12 @@ def _build_recommendation(
 ) -> TextPair:
     if result.srm_detected:
         return TextPair(
-            plain=(
+            signal=(
                 "Don't act on these results yet. First, find and fix the cause of the "
                 "group imbalance — a randomisation, filtering, or logging issue is the "
                 "most common culprit."
             ),
-            technical=(
+            spectrum=(
                 "Halt action. SRM detected; downstream estimates are biased. "
                 "Audit the assignment pipeline (split logic, filters, deduplication) "
                 "before re-running."
@@ -346,12 +346,12 @@ def _build_recommendation(
     if verdict == "ship":
         m = primary.metric  # safe by construction
         return TextPair(
-            plain=(
+            signal=(
                 f"Ship the treatment. The lift on {m.metric_name} is large enough and "
                 "consistent enough to justify rolling out, ideally with a small holdout "
                 "to keep monitoring the impact."
             ),
-            technical=(
+            spectrum=(
                 f"Roll out treatment. {m.metric_name} shows lift_rel = "
                 f"{m.lift_relative:.3%} significant at α = {result.config_snapshot.alpha}. "
                 "Recommend a 5–10% holdout for ongoing monitoring."
@@ -360,24 +360,24 @@ def _build_recommendation(
     if verdict == "dont_ship":
         m = primary.metric
         return TextPair(
-            plain=(
+            signal=(
                 f"Don't ship. The treatment is dragging {m.metric_name} down "
                 "by a real, measurable amount. Roll back and investigate which "
                 "behaviour change caused the regression."
             ),
-            technical=(
+            spectrum=(
                 f"Reject treatment. {m.metric_name} regression of "
                 f"{m.lift_relative:.3%} significant at α = {result.config_snapshot.alpha}. "
                 "Roll back; instrument additional segments to localise the regression."
             ),
         )
     return TextPair(
-        plain=(
+        signal=(
             "Hold. The data don't yet say the treatment works (or doesn't). Either "
             "let the experiment accumulate more sample, or design a follow-up that "
             "targets the segment where you expect the effect to be largest."
         ),
-        technical=(
+        spectrum=(
             "Inconclusive at α = "
             f"{result.config_snapshot.alpha}. Options: extend runtime to grow power, "
             "add covariate adjustment (CUPED), or restrict to the pre-specified "
@@ -390,11 +390,11 @@ def _build_reasoning(
     primary: Optional[_PrimaryReadout], result: AnalysisResult
 ) -> TextPair:
     if primary is None:
-        return TextPair(plain="—", technical="—")
+        return TextPair(signal="—", spectrum="—")
     m = primary.metric
     p_for_text = m.p_value if m.p_value is not None else 1.0
 
-    # ── Plain: three-line decision template ──
+    # ── Signal: three-line decision template ──
     # Line 1: What happened (business terms, absolute numbers)
     direction_word = {"up": "more", "down": "less", "flat": "about the same amount of"}[
         primary.direction
@@ -423,32 +423,32 @@ def _build_reasoning(
             "More data or a different approach may be needed."
         )
 
-    plain = f"{line1} {line2} {line3}"
+    signal = f"{line1} {line2} {line3}"
 
-    # ── Technical: unchanged ──
-    tech_extras = []
+    # ── Spectrum: unchanged ──
+    spec_extras = []
     if m.test_statistic is not None:
-        tech_extras.append(f"test stat = {m.test_statistic:.4g}")
+        spec_extras.append(f"test stat = {m.test_statistic:.4g}")
     if m.effect_size is not None and m.effect_size != 0:
-        tech_extras.append(f"Cohen's d = {m.effect_size:.4g}")
+        spec_extras.append(f"Cohen's d = {m.effect_size:.4g}")
     if m.p_value_adjusted is not None and m.p_value is not None and m.p_value_adjusted != m.p_value:
-        tech_extras.append(f"p_adjusted (BH) = {m.p_value_adjusted:.4g}")
+        spec_extras.append(f"p_adjusted (BH) = {m.p_value_adjusted:.4g}")
     if m.n_control is not None and m.n_treatment is not None:
-        tech_extras.append(f"n = ({m.n_control}, {m.n_treatment})")
-    extras = "; ".join(tech_extras)
-    tech = (
+        spec_extras.append(f"n = ({m.n_control}, {m.n_treatment})")
+    extras = "; ".join(spec_extras)
+    spec = (
         f"{m.metric_name}: μ_t = {m.treatment_mean:.4g}, μ_c = {m.control_mean:.4g}, "
         f"Δ = {m.lift_absolute:.4g} ({m.lift_relative:.4g}); "
         f"95% CI [{m.ci_lower:.4g}, {m.ci_upper:.4g}]; p = {p_for_text:.4g}"
     )
     if extras:
-        tech += f"; {extras}"
-    tech += "."
-    return TextPair(plain=plain, technical=tech)
+        spec += f"; {extras}"
+    spec += "."
+    return TextPair(signal=signal, spectrum=spec)
 
 
 def _confidence_word(p: float) -> str:
-    """Map a p-value to a plain-language confidence descriptor."""
+    """Map a p-value to a signal-language confidence descriptor."""
     if p < 0.001:
         return "very confident"
     if p < 0.01:
@@ -470,12 +470,12 @@ def _build_caveats(
             CaveatItem(
                 severity="critical",
                 title="Sample Ratio Mismatch detected",
-                body_plain=(
+                body_signal=(
                     "The control and treatment groups aren't the size you expected. "
                     "That's almost always a bug in randomisation, filtering, or logging "
                     "— and it makes every result below this banner suspect."
                 ),
-                body_technical=(
+                body_spectrum=(
                     f"Chi-squared SRM test rejected at p = {result.srm_p_value:.4g}, "
                     "well below the conventional 0.001 threshold. Re-run only after "
                     "the assignment pipeline is audited and corrected."
@@ -488,12 +488,12 @@ def _build_caveats(
             CaveatItem(
                 severity="info",
                 title="Multiple metrics tested — corrected for false discovery",
-                body_plain=(
+                body_signal=(
                     "Each metric you test adds a small chance of a false positive. "
                     "We adjusted the p-values using the Benjamini-Hochberg procedure "
                     "so the results below already account for this."
                 ),
-                body_technical=(
+                body_spectrum=(
                     f"BH/FDR correction applied across {len(result.metrics)} metrics "
                     f"at α = {result.config_snapshot.alpha}. Adjusted p-values surface "
                     "in the metric detail rows."
@@ -510,12 +510,12 @@ def _build_caveats(
                     CaveatItem(
                         severity="warning",
                         title="Small sample size",
-                        body_plain=(
+                        body_signal=(
                             f"The smaller group has only {n_min} units. Estimates "
                             "with this little data tend to swing wildly between "
                             "experiments — treat the magnitude with caution."
                         ),
-                        body_technical=(
+                        body_spectrum=(
                             f"min(n_c, n_t) = {n_min}. Power for typical effect sizes "
                             "(Cohen's d ≈ 0.2–0.3) is below 0.5; consider variance "
                             "reduction (CUPED) or a longer run."
@@ -533,12 +533,12 @@ def _build_caveats(
                         CaveatItem(
                             severity="warning",
                             title="Confidence interval is wide",
-                            body_plain=(
+                            body_signal=(
                                 "The size of the effect could plausibly be quite "
                                 "different from the central estimate — the data narrows "
                                 "it down, but not tightly. Plan for a range of outcomes."
                             ),
-                            body_technical=(
+                            body_spectrum=(
                                 f"CI width / |lift_abs| ratio ≈ {width_ratio:.2f}. "
                                 "Estimate is statistically distinct from zero but "
                                 "magnitude is poorly identified."
@@ -555,48 +555,48 @@ def _build_next_steps(
     primary: Optional[_PrimaryReadout],
 ) -> tuple[List[str], List[str]]:
     if result.srm_detected:
-        plain = [
+        signal = [
             "Pause any rollout and audit the assignment pipeline (randomisation, filters, logging).",
             "Re-run the experiment only after the imbalance is fixed.",
         ]
-        tech = [
+        spec = [
             "Audit the assignment service and downstream filter steps for bias.",
             "Re-validate counts post-fix; require χ² p > 0.05 before re-analysing.",
         ]
-        return plain, tech
+        return signal, spec
 
     if verdict == "ship":
-        plain = [
+        signal = [
             "Plan a phased rollout, ideally retaining a 5–10% holdout to keep observing the effect.",
             "Set up an alert on the primary metric so any regression after rollout is caught early.",
         ]
-        tech = [
+        spec = [
             "Stage rollout with a 5–10% holdout for ongoing observation.",
             "Configure post-launch alerting on lift_rel and SRM for the rolled-out segment.",
         ]
-        return plain, tech
+        return signal, spec
 
     if verdict == "dont_ship":
-        plain = [
+        signal = [
             "Roll back the change and gather more telemetry on which segment drove the regression.",
             "Form a hypothesis about the failure mode before iterating on the next variant.",
         ]
-        tech = [
+        spec = [
             "Roll back; segment by user / region / device to localise the regression.",
             "Pre-register the next variant's hypothesis before re-testing.",
         ]
-        return plain, tech
+        return signal, spec
 
     # hold
-    plain = [
+    signal = [
         "Either let the experiment run longer to gain power, or scope it to the segment where you expect the largest effect.",
         "Consider variance reduction (CUPED) if pre-experiment data is available.",
     ]
-    tech = [
+    spec = [
         "Compute required sample size for the targeted MDE; extend runtime accordingly.",
         "Add CUPED with pre-period covariates to tighten CIs without extending runtime.",
     ]
-    return plain, tech
+    return signal, spec
 
 
 # ─────────────────────────── HTE narration ───────────────────────────
@@ -604,8 +604,8 @@ def _build_hte_narration(hte: HTEResult) -> TextPair:
     """Build voice-aware narration for heterogeneous treatment effects."""
     if not hte.subgroups:
         return TextPair(
-            plain="The analysis did not find meaningful variation in treatment response across groups.",
-            technical="No significant CATE heterogeneity detected across quartile segments.",
+            signal="The analysis did not find meaningful variation in treatment response across groups.",
+            spectrum="No significant CATE heterogeneity detected across quartile segments.",
         )
 
     # Find most important feature
@@ -619,7 +619,7 @@ def _build_hte_narration(hte: HTEResult) -> TextPair:
     worst_sg = min(hte.subgroups, key=lambda s: s.mean_cate)
     spread = best_sg.mean_cate - worst_sg.mean_cate
 
-    plain = (
+    signal = (
         f"The treatment effect varied meaningfully across your data. "
         f"{feat_label.title()} was the strongest driver of this variation. "
         f"The most responsive group ({best_sg.feature.replace('_', ' ')} "
@@ -628,7 +628,7 @@ def _build_hte_narration(hte: HTEResult) -> TextPair:
         f"{worst_sg.segment_label}) saw {worst_sg.mean_cate:,.0f} — "
         f"a spread of {spread:,.0f}."
     )
-    technical = (
+    spectrum = (
         f"Heterogeneity detected. Top feature: {top_feat_name} "
         f"(importance={top_feat_imp:.3f}). "
         f"CATE range across segments: [{worst_sg.mean_cate:,.0f}, "
@@ -636,7 +636,7 @@ def _build_hte_narration(hte: HTEResult) -> TextPair:
         f"Spread = {spread:,.0f}. n_features={len(hte.feature_names)}."
     )
 
-    return TextPair(plain=plain, technical=technical)
+    return TextPair(signal=signal, spectrum=spectrum)
 
 
 # ─────────────────────────── Bandit narration ───────────────────────────
@@ -650,7 +650,7 @@ def _build_bandit_narration(br: BanditReplayResult) -> TextPair:
         else f"the end of the {br.n_periods} {period_word}"
     )
 
-    plain = (
+    signal = (
         f"Your test ran for {br.n_periods} {period_word} with equal traffic "
         f"to both groups. A smarter system would have gradually shifted "
         f"{br.final_allocation:.0%} of traffic to the winning option by "
@@ -660,7 +660,7 @@ def _build_bandit_narration(br: BanditReplayResult) -> TextPair:
         f"{br.metric_name}."
     )
 
-    technical = (
+    spectrum = (
         f"Thompson Sampling replay ({br.metric_type}, {br.mode} mode): "
         f"{br.n_periods} periods, {br.n_observations:,} observations. "
         f"Convergence to ≥75% allocation at period "
@@ -670,7 +670,7 @@ def _build_bandit_narration(br: BanditReplayResult) -> TextPair:
         f"Δ = {br.regret_saved:,.1f} ({br.regret_saved_pct:.0%} reduction)."
     )
 
-    return TextPair(plain=plain, technical=technical)
+    return TextPair(signal=signal, spectrum=spectrum)
 
 
 # ─────────────────────────── LLM enhancement (optional) ───────────────────────────
@@ -691,24 +691,24 @@ def _enrich_with_llm(
 
     prompt = f"""You are a Principal Data Scientist writing the diagnosis and recommendation \
 sections of an experiment prescription. Rewrite the two sections below in **two registers**: \
-plain (business-friendly, jargon-free, second person, 2–3 sentences) and technical \
+signal (business-friendly, jargon-free, second person, 2–3 sentences) and spectrum \
 (statistician-grade, terse, 1–2 sentences). Do not change the verdict or invent numbers.
 
 Verdict: {base.verdict}
 Facts:
 {facts}
 
-Existing diagnosis (plain): {base.diagnosis.plain}
-Existing diagnosis (technical): {base.diagnosis.technical}
-Existing recommendation (plain): {base.recommendation.plain}
-Existing recommendation (technical): {base.recommendation.technical}
+Existing diagnosis (signal): {base.diagnosis.signal}
+Existing diagnosis (spectrum): {base.diagnosis.spectrum}
+Existing recommendation (signal): {base.recommendation.signal}
+Existing recommendation (spectrum): {base.recommendation.spectrum}
 
 Reply with a JSON object exactly matching this schema, and nothing else:
 {{
-  "diagnosis_plain": "...",
-  "diagnosis_technical": "...",
-  "recommendation_plain": "...",
-  "recommendation_technical": "..."
+  "diagnosis_signal": "...",
+  "diagnosis_spectrum": "...",
+  "recommendation_signal": "...",
+  "recommendation_spectrum": "..."
 }}
 """
 
@@ -736,12 +736,12 @@ Reply with a JSON object exactly matching this schema, and nothing else:
     return base.model_copy(
         update={
             "diagnosis": TextPair(
-                plain=data.get("diagnosis_plain", base.diagnosis.plain),
-                technical=data.get("diagnosis_technical", base.diagnosis.technical),
+                signal=data.get("diagnosis_signal", base.diagnosis.signal),
+                spectrum=data.get("diagnosis_spectrum", base.diagnosis.spectrum),
             ),
             "recommendation": TextPair(
-                plain=data.get("recommendation_plain", base.recommendation.plain),
-                technical=data.get("recommendation_technical", base.recommendation.technical),
+                signal=data.get("recommendation_signal", base.recommendation.signal),
+                spectrum=data.get("recommendation_spectrum", base.recommendation.spectrum),
             ),
         }
     )
@@ -759,13 +759,13 @@ def _facts_payload(base: PrescriptionNarration, result: AnalysisResult) -> str:
 
 
 # ─────────────────────────── Markdown rendering ───────────────────────────
-def render_markdown(p: PrescriptionNarration, *, voice: Literal["plain", "technical"] = "plain") -> str:
+def render_markdown(p: PrescriptionNarration, *, voice: Literal["signal", "spectrum"] = "signal") -> str:
     label = {"ship": "Ship it.", "hold": "Hold.", "dont_ship": "Don't ship."}[p.verdict]
-    headline = p.headline.plain if voice == "plain" else p.headline.technical
-    diagnosis = p.diagnosis.plain if voice == "plain" else p.diagnosis.technical
-    recommendation = p.recommendation.plain if voice == "plain" else p.recommendation.technical
-    reasoning = p.reasoning.plain if voice == "plain" else p.reasoning.technical
-    next_steps = p.next_steps_plain if voice == "plain" else p.next_steps_technical
+    headline = p.headline.signal if voice == "signal" else p.headline.spectrum
+    diagnosis = p.diagnosis.signal if voice == "signal" else p.diagnosis.spectrum
+    recommendation = p.recommendation.signal if voice == "signal" else p.recommendation.spectrum
+    reasoning = p.reasoning.signal if voice == "signal" else p.reasoning.spectrum
+    next_steps = p.next_steps_signal if voice == "signal" else p.next_steps_spectrum
 
     parts = [
         f"## Prescription — {label}",
@@ -786,7 +786,7 @@ def render_markdown(p: PrescriptionNarration, *, voice: Literal["plain", "techni
     if p.caveats:
         parts.extend(["", "### Caveats"])
         for c in p.caveats:
-            body = c.body_plain if voice == "plain" else c.body_technical
+            body = c.body_signal if voice == "signal" else c.body_spectrum
             sev = {"info": "ℹ", "warning": "!", "critical": "✕"}.get(c.severity, "•")
             parts.append(f"- **{sev} {c.title}** — {body}")
 
@@ -796,11 +796,11 @@ def render_markdown(p: PrescriptionNarration, *, voice: Literal["plain", "techni
             parts.append(f"- {ns}")
 
     if p.hte_summary is not None:
-        hte_text = p.hte_summary.plain if voice == "plain" else p.hte_summary.technical
+        hte_text = p.hte_summary.signal if voice == "signal" else p.hte_summary.spectrum
         parts.extend(["", "### Who Benefits Most", hte_text])
 
     if p.bandit_summary is not None:
-        bandit_text = p.bandit_summary.plain if voice == "plain" else p.bandit_summary.technical
+        bandit_text = p.bandit_summary.signal if voice == "signal" else p.bandit_summary.spectrum
         parts.extend(["", "### Opportunity Cost Analysis", bandit_text])
 
     return "\n".join(parts)

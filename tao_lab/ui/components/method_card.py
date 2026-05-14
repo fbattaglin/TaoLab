@@ -18,7 +18,7 @@ def render_method_selector(
     candidates: List[MethodCandidate],
     selected_idx: int,
     *,
-    voice: Voice = "plain",
+    voice: Voice = "signal",
 ) -> Optional[int]:
     """Render ranked, selectable method cards.
 
@@ -61,9 +61,9 @@ def render_method_selector(
         # ── Display name + voice-aware blurb ──
         blurb = METHOD_BLURBS.get(candidate.method)
         display_name = blurb.display_name if blurb else candidate.method
-        description = (blurb.plain if voice == "plain" else blurb.technical) if blurb else ""
+        description = (blurb.signal if voice == "signal" else blurb.spectrum) if blurb else ""
         assumptions = (
-            (blurb.assumptions_plain if voice == "plain" else blurb.assumptions_technical)
+            (blurb.assumptions_signal if voice == "signal" else blurb.assumptions_spectrum)
             if blurb else ""
         )
 
@@ -163,7 +163,7 @@ def render_method_override_picker(
     candidates: List[MethodCandidate],
     selected_idx: int,
     *,
-    voice: Voice = "plain",
+    voice: Voice = "signal",
 ) -> Optional[int]:
     """Compact picker that lists ALL candidates (including score=0 ones).
 
@@ -217,11 +217,11 @@ def render_method_override_picker(
 
 # ── Backward-compat wrappers (used if any old code calls them) ──
 
-def render_method_card(method_name: str, rationale: str, *, voice: Voice = "plain") -> None:
+def render_method_card(method_name: str, rationale: str, *, voice: Voice = "signal") -> None:
     """Legacy single-card render. Delegates to a minimal card display."""
     blurb_entry = METHOD_BLURBS.get(method_name)
     title = blurb_entry.display_name if blurb_entry else method_name
-    default_blurb = (blurb_entry.plain if voice == "plain" else blurb_entry.technical) if blurb_entry else rationale
+    default_blurb = (blurb_entry.signal if voice == "signal" else blurb_entry.spectrum) if blurb_entry else rationale
     blurb = rationale or default_blurb
     eyebrow = copy.step2_method_card_eyebrow(voice)
 
@@ -242,7 +242,7 @@ def render_method_card(method_name: str, rationale: str, *, voice: Voice = "plai
     )
 
 
-def render_alternatives(*, voice: Voice = "plain") -> None:
+def render_alternatives(*, voice: Voice = "signal") -> None:
     """Legacy static table. Kept for backward compat but no longer used in
     the main flow."""
     label = copy.step2_alternatives_link(voice)

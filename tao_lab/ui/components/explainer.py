@@ -11,7 +11,7 @@ Three helpers, from lightest to richest:
    tooltip-only. Uses ``st.session_state`` for tracking.
 
 3. **`concept_drawer(key, data_context)`** — an enhanced ``st.expander`` with
-   plain explanation, technical anchor, "when to use / avoid" pairs, optional
+   signal explanation, spectrum anchor, "when to use / avoid" pairs, optional
    worked example from the user's data, and a citation link.
 
 Plus:
@@ -41,17 +41,17 @@ _DOT_SVG = (
 _SEEN_KEY_PREFIX = "_tl_seen_terms_"
 
 
-def term_label(key: str, *, voice: Voice = "plain") -> str:
+def term_label(key: str, *, voice: Voice = "signal") -> str:
     """Return an HTML snippet rendering the glossary term with an info dot.
 
-    Use inside `st.markdown(..., unsafe_allow_html=True)`. In Plain voice the
-    rendered surface is the plain-language synonym (when one exists); in
-    Technical voice it's the canonical term. Hovering surfaces the short blurb.
+    Use inside `st.markdown(..., unsafe_allow_html=True)`. In Signal voice the
+    rendered surface is the signal-language synonym (when one exists); in
+    Spectrum voice it's the canonical term. Hovering surfaces the short blurb.
     """
     entry = GLOSSARY.get(key)
     if entry is None:
         return key
-    surface = entry.plain_synonym if (voice == "plain" and entry.plain_synonym) else entry.term
+    surface = entry.signal_synonym if (voice == "signal" and entry.signal_synonym) else entry.term
     title = entry.short.replace('"', "&quot;")
     return (
         f'<span class="tl-term" title="{title}" '
@@ -62,7 +62,7 @@ def term_label(key: str, *, voice: Voice = "plain") -> str:
     )
 
 
-def term_with_hint(key: str, *, voice: Voice = "plain", step: int = 0) -> str:
+def term_with_hint(key: str, *, voice: Voice = "signal", step: int = 0) -> str:
     """Return a term label with a first-use hint.
 
     On the first call for a given ``key`` + ``step`` combination within the
@@ -112,8 +112,8 @@ def explainer_drawer(key: str) -> None:
     if entry is None:
         return
     with st.expander(f"What is {entry.term}?", expanded=False):
-        if entry.plain_synonym:
-            st.caption(f"In plain words: *{entry.plain_synonym}*")
+        if entry.signal_synonym:
+            st.caption(f"In signal words: *{entry.signal_synonym}*")
         st.write(entry.description)
         if entry.learn_more:
             st.caption(f"Reference: {entry.learn_more}")
@@ -146,9 +146,9 @@ def concept_drawer(
         return
 
     with st.expander(f"What is {entry.term}?", expanded=False):
-        # ── Plain explanation ──
-        if entry.plain_synonym:
-            st.caption(f"In plain words: *{entry.plain_synonym}*")
+        # ── Signal explanation ──
+        if entry.signal_synonym:
+            st.caption(f"In signal words: *{entry.signal_synonym}*")
         st.write(entry.description)
 
         # ── Worked example from user data ──
@@ -175,7 +175,7 @@ def concept_drawer(
                 with cols[1]:
                     st.markdown(f"**When you'd avoid this:** {avoid_when}")
 
-        # ── Technical anchor / citation ──
+        # ── Spectrum anchor / citation ──
         if entry.learn_more:
             st.caption(f"Reference: {entry.learn_more}")
 

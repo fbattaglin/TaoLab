@@ -24,13 +24,13 @@ _component = components.declare_component(
 )
 
 
-Voice = Literal["plain", "technical"]
+Voice = Literal["signal", "spectrum"]
 
 
 def render_prescription(
     narration: PrescriptionNarration,
     *,
-    voice: Voice = "plain",
+    voice: Voice = "signal",
     key: Optional[str] = None,
 ) -> None:
     """Render the prescription card. Falls back to a Streamlit-only layout if
@@ -53,9 +53,9 @@ def render_prescription(
 
 
 def _build_args(narration: PrescriptionNarration, *, voice: Voice) -> dict:
-    pick = (lambda pair: pair.plain) if voice == "plain" else (lambda pair: pair.technical)
+    pick = (lambda pair: pair.signal) if voice == "signal" else (lambda pair: pair.spectrum)
     next_steps = (
-        narration.next_steps_plain if voice == "plain" else narration.next_steps_technical
+        narration.next_steps_signal if voice == "signal" else narration.next_steps_spectrum
     )
     return {
         "diagnosis": pick(narration.diagnosis),
@@ -67,7 +67,7 @@ def _build_args(narration: PrescriptionNarration, *, voice: Voice) -> dict:
             {
                 "severity": c.severity,
                 "title": c.title,
-                "body": c.body_plain if voice == "plain" else c.body_technical,
+                "body": c.body_signal if voice == "signal" else c.body_spectrum,
             }
             for c in narration.caveats
         ],

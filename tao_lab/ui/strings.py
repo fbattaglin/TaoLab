@@ -22,283 +22,283 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-Voice = Literal["plain", "technical"]
+Voice = Literal["signal", "spectrum"]
 
 
 @dataclass(frozen=True)
 class CopyPair:
-    plain: str
-    technical: str
+    signal: str
+    spectrum: str
 
     def __call__(self, voice: Voice) -> str:
-        return self.plain if voice == "plain" else self.technical
+        return self.signal if voice == "signal" else self.spectrum
 
 
 # ─────────────────────── Top-level UI copy ───────────────────────
 class _Copy:
     # Header / shell
     voice_toggle_label = CopyPair(
-        plain="Reader",
-        technical="Reader",
+        signal="Reader",
+        spectrum="Reader",
     )
-    voice_plain = CopyPair(plain="Plain", technical="Plain")
-    voice_technical = CopyPair(plain="Technical", technical="Technical")
+    voice_signal = CopyPair(signal="Signal", spectrum="Signal")
+    voice_spectrum = CopyPair(signal="Spectrum", spectrum="Spectrum")
 
     # Step 1 — Data
     step1_hero_headline = CopyPair(
-        plain="From raw data to a confident verdict.",
-        technical="From raw data to a defensible experimental verdict.",
+        signal="From raw data to a confident verdict.",
+        spectrum="From raw data to a defensible experimental verdict.",
     )
     step1_hero_sub = CopyPair(
-        plain="Drop your experiment data and we'll guide you through the analysis.",
-        technical="Upload an experiment dataset; we'll diagnose, configure, and run the appropriate analysis.",
+        signal="Drop your experiment data and we'll guide you through the analysis.",
+        spectrum="Upload an experiment dataset; we'll diagnose, configure, and run the appropriate analysis.",
     )
     step1_drop_label = CopyPair(
-        plain="Drop a CSV or Excel file here",
-        technical="Upload experiment data (CSV / XLSX)",
+        signal="Drop a CSV or Excel file here",
+        spectrum="Upload experiment data (CSV / XLSX)",
     )
     step1_samples_label = CopyPair(
-        plain="Or try a sample experiment:",
-        technical="Or load a canonical example:",
+        signal="Or try a sample experiment:",
+        spectrum="Or load a canonical example:",
     )
     step1_continue = CopyPair(
-        plain="Continue →",
-        technical="Continue to Diagnosis →",
+        signal="Continue →",
+        spectrum="Continue to Diagnosis →",
     )
     step1_question_label = CopyPair(
-        plain="What are you trying to learn from this data?",
-        technical="Business question (optional, included in the report)",
+        signal="What are you trying to learn from this data?",
+        spectrum="Business question (optional, included in the report)",
     )
 
     # Step 2 — Diagnose
     step2_method_card_eyebrow = CopyPair(
-        plain="Recommended approach",
-        technical="Recommended method",
+        signal="Recommended approach",
+        spectrum="Recommended method",
     )
     step2_alternatives_link = CopyPair(
-        plain="Why not the alternatives?",
-        technical="Compare available methods",
+        signal="Why not the alternatives?",
+        spectrum="Compare available methods",
     )
     step2_health_title = CopyPair(
-        plain="Data health",
-        technical="Data Health Score",
+        signal="Data health",
+        spectrum="Data Health Score",
     )
     step2_use_recommended = CopyPair(
-        plain="Use this approach →",
-        technical="Use recommended method →",
+        signal="Use this approach →",
+        spectrum="Use recommended method →",
     )
     step2_best_fit_badge = CopyPair(
-        plain="Best fit",
-        technical="Recommended",
+        signal="Best fit",
+        spectrum="Recommended",
     )
     step2_also_viable_badge = CopyPair(
-        plain="Also viable",
-        technical="Alternative",
+        signal="Also viable",
+        spectrum="Alternative",
     )
     step2_requirements_label = CopyPair(
-        plain="What you'll need to provide",
-        technical="Required inputs",
+        signal="What you'll need to provide",
+        spectrum="Required inputs",
     )
     step2_use_selected = CopyPair(
-        plain="Use this approach →",
-        technical="Proceed with selected method →",
+        signal="Use this approach →",
+        spectrum="Proceed with selected method →",
     )
     step2_ambiguity_note = CopyPair(
-        plain="This data could fit more than one method. Pick the one that matches how your data was collected.",
-        technical="Multiple methods are viable. Selection depends on the data-generating process.",
+        signal="This data could fit more than one method. Pick the one that matches how your data was collected.",
+        spectrum="Multiple methods are viable. Selection depends on the data-generating process.",
     )
     step2_override_expander = CopyPair(
-        plain="Choose a different method",
-        technical="Override automatic method selection",
+        signal="Choose a different method",
+        spectrum="Override automatic method selection",
     )
     step2_override_hint = CopyPair(
-        plain="Our recommendation is based on your data's structure. If you know your analysis goal, pick any method below.",
-        technical="Engine score reflects structural signals only. Override if domain knowledge contradicts the heuristic.",
+        signal="Our recommendation is based on your data's structure. If you know your analysis goal, pick any method below.",
+        spectrum="Engine score reflects structural signals only. Override if domain knowledge contradicts the heuristic.",
     )
     step2_hte_badge = CopyPair(
-        plain="Can analyze who benefits most",
-        technical="HTE eligible (CausalForestDML)",
+        signal="Can analyze who benefits most",
+        spectrum="HTE eligible (CausalForestDML)",
     )
 
     # Step 3 — Configure
     step3_variant_eyebrow = CopyPair(
-        plain="Comparison",
-        technical="Variant assignment",
+        signal="Comparison",
+        spectrum="Variant assignment",
     )
     step3_group_col_label = CopyPair(
-        plain="Group column",
-        technical="Assignment column",
+        signal="Group column",
+        spectrum="Assignment column",
     )
     step3_metrics_eyebrow = CopyPair(
-        plain="What to measure",
-        technical="Metrics",
+        signal="What to measure",
+        spectrum="Metrics",
     )
     step3_outcome_label = CopyPair(
-        plain="What outcome are you measuring?",
-        technical="Continuous metrics to evaluate",
+        signal="What outcome are you measuring?",
+        spectrum="Continuous metrics to evaluate",
     )
     step3_outcome_help = CopyPair(
-        plain="Pick the numbers you want to compare between the groups — e.g. revenue, sessions, time on page.",
-        technical="Per-unit numeric outcomes. We'll compare averages between groups.",
+        signal="Pick the numbers you want to compare between the groups — e.g. revenue, sessions, time on page.",
+        spectrum="Per-unit numeric outcomes. We'll compare averages between groups.",
     )
     step3_advanced_label = CopyPair(
-        plain="Advanced settings",
-        technical="Advanced parameters",
+        signal="Advanced settings",
+        spectrum="Advanced parameters",
     )
     step3_run = CopyPair(
-        plain="Run analysis →",
-        technical="Run analysis →",
+        signal="Run analysis →",
+        spectrum="Run analysis →",
     )
     step3_why_settings = CopyPair(
-        plain="Why are these fields pre-filled?",
-        technical="Inferred configuration",
+        signal="Why are these fields pre-filled?",
+        spectrum="Inferred configuration",
     )
     step3_hte_toggle = CopyPair(
-        plain="Analyze who benefits most",
-        technical="Enable HTE estimation",
+        signal="Analyze who benefits most",
+        spectrum="Enable HTE estimation",
     )
     step3_hte_help = CopyPair(
-        plain="Find which groups respond differently to the treatment. Takes a bit longer.",
-        technical="Fits CausalForestDML alongside LinearDML for individual-level CATE estimates.",
+        signal="Find which groups respond differently to the treatment. Takes a bit longer.",
+        spectrum="Fits CausalForestDML alongside LinearDML for individual-level CATE estimates.",
     )
     step3_hte_features_label = CopyPair(
-        plain="Which factors might cause different responses?",
-        technical="Effect modifier features (X)",
+        signal="Which factors might cause different responses?",
+        spectrum="Effect modifier features (X)",
     )
     step3_hte_features_help = CopyPair(
-        plain="Pick the characteristics that might make people respond differently — like age, income, or location.",
-        technical="CATE conditioning features. Defaults to same as confounders (W=X).",
+        signal="Pick the characteristics that might make people respond differently — like age, income, or location.",
+        spectrum="CATE conditioning features. Defaults to same as confounders (W=X).",
     )
 
     # Step 4 — Run
     step4_title = CopyPair(
-        plain="Analyzing your experiment...",
-        technical="Running analysis...",
+        signal="Analyzing your experiment...",
+        spectrum="Running analysis...",
     )
     step4_progress_srm = CopyPair(
-        plain="Checking that the groups split the way you intended...",
-        technical="Running SRM check...",
+        signal="Checking that the groups split the way you intended...",
+        spectrum="Running SRM check...",
     )
     step4_progress_fit = CopyPair(
-        plain="Measuring the effect of the change...",
-        technical="Fitting statistical model...",
+        signal="Measuring the effect of the change...",
+        spectrum="Fitting statistical model...",
     )
     step4_progress_narrate = CopyPair(
-        plain="Writing up the findings...",
-        technical="Generating prescription...",
+        signal="Writing up the findings...",
+        spectrum="Generating prescription...",
     )
     step4_progress_viz = CopyPair(
-        plain="Preparing charts...",
-        technical="Rendering diagnostics...",
+        signal="Preparing charts...",
+        spectrum="Rendering diagnostics...",
     )
     step4_progress_hte = CopyPair(
-        plain="Finding which groups respond differently...",
-        technical="Fitting CausalForestDML for heterogeneous effects...",
+        signal="Finding which groups respond differently...",
+        spectrum="Fitting CausalForestDML for heterogeneous effects...",
     )
     step4_progress_bandit = CopyPair(
-        plain="Comparing against dynamic allocation...",
-        technical="Running Thompson Sampling replay simulation...",
+        signal="Comparing against dynamic allocation...",
+        spectrum="Running Thompson Sampling replay simulation...",
     )
 
     # Step 5 — Prescription
     step5_srm_pass = CopyPair(
-        plain="Groups split as expected",
-        technical="SRM passed",
+        signal="Groups split as expected",
+        spectrum="SRM passed",
     )
     step5_srm_fail = CopyPair(
-        plain="Groups aren't split the way they should be",
-        technical="SRM detected",
+        signal="Groups aren't split the way they should be",
+        spectrum="SRM detected",
     )
     step5_forest_title = CopyPair(
-        plain="How much each metric changed",
-        technical="Lift & 95% confidence intervals",
+        signal="How much each metric changed",
+        spectrum="Lift & 95% confidence intervals",
     )
     step5_metrics_title = CopyPair(
-        plain="Results per metric",
-        technical="Per-metric breakdown",
+        signal="Results per metric",
+        spectrum="Per-metric breakdown",
     )
     step5_lift_label = CopyPair(
-        plain="How much it changed",
-        technical="Relative lift",
+        signal="How much it changed",
+        spectrum="Relative lift",
     )
     step5_pvalue_label = CopyPair(
-        plain="Certainty",
-        technical="p-value",
+        signal="Certainty",
+        spectrum="p-value",
     )
     step5_sig_yes = CopyPair(
-        plain="Real difference detected",
-        technical="Statistically significant",
+        signal="Real difference detected",
+        spectrum="Statistically significant",
     )
     step5_sig_no = CopyPair(
-        plain="Could be random noise",
-        technical="Not significant",
+        signal="Could be random noise",
+        spectrum="Not significant",
     )
     step5_forest_explanation = CopyPair(
-        plain=(
+        signal=(
             "Each dot shows how much the change moved a metric. "
             "Dots to the right mean improvement; dots to the left mean it got worse. "
             "The horizontal bar is our uncertainty — a shorter bar means we're more precise. "
             "Orange diamonds are statistically meaningful results; open circles are inconclusive."
         ),
-        technical=(
+        spectrum=(
             "Forest plot of relative lift with asymmetric 95% Wald CIs per metric (BH-adjusted). "
             "Orange diamonds = significant (p_adj < α); open circles = non-significant. "
             "X-axis: relative lift when |control_mean| > 0, absolute lift otherwise."
         ),
     )
-    verdict_ship = CopyPair(plain="Ship it.", technical="Ship — significant positive effect.")
-    verdict_hold = CopyPair(plain="Hold.", technical="Hold — inconclusive or caveated.")
-    verdict_no_ship = CopyPair(plain="Don't ship.", technical="Reject — significant adverse effect.")
+    verdict_ship = CopyPair(signal="Ship it.", spectrum="Ship — significant positive effect.")
+    verdict_hold = CopyPair(signal="Hold.", spectrum="Hold — inconclusive or caveated.")
+    verdict_no_ship = CopyPair(signal="Don't ship.", spectrum="Reject — significant adverse effect.")
 
     # Step 5 — HTE section
     step5_hte_title = CopyPair(
-        plain="Who benefits most?",
-        technical="Heterogeneous Treatment Effects",
+        signal="Who benefits most?",
+        spectrum="Heterogeneous Treatment Effects",
     )
     step5_hte_intro = CopyPair(
-        plain="Not everyone responds the same way. This section shows which groups benefited more or less than average.",
-        technical="CATE estimates from CausalForestDML reveal effect heterogeneity across observed covariates.",
+        signal="Not everyone responds the same way. This section shows which groups benefited more or less than average.",
+        spectrum="CATE estimates from CausalForestDML reveal effect heterogeneity across observed covariates.",
     )
     step5_hte_importance_title = CopyPair(
-        plain="What drives the difference",
-        technical="Feature importance for heterogeneity",
+        signal="What drives the difference",
+        spectrum="Feature importance for heterogeneity",
     )
     step5_hte_importance_caption = CopyPair(
-        plain=(
+        signal=(
             "Taller bars mean that characteristic matters more for determining who benefits. "
             "The top variable explains the most variation in how people responded to the treatment."
         ),
-        technical=(
+        spectrum=(
             "Feature importance from the causal forest, measuring each covariate's contribution "
             "to CATE heterogeneity. Normalized to sum to 1."
         ),
     )
     step5_hte_histogram_title = CopyPair(
-        plain="How the effect varies across individuals",
-        technical="CATE distribution",
+        signal="How the effect varies across individuals",
+        spectrum="CATE distribution",
     )
     step5_hte_histogram_caption = CopyPair(
-        plain=(
+        signal=(
             "Each bar represents a group of people with a similar treatment effect. "
             "The orange dotted line is the average effect. "
             "People to the right of zero benefited; people to the left were harmed."
         ),
-        technical=(
+        spectrum=(
             "Distribution of individual-level CATE estimates. "
             "Orange dotted line = ATE. Red dashed line = zero (no effect). "
             "Spread indicates degree of effect heterogeneity."
         ),
     )
     step5_hte_subgroup_title = CopyPair(
-        plain="Effect by group",
-        technical="Subgroup CATE estimates",
+        signal="Effect by group",
+        spectrum="Subgroup CATE estimates",
     )
     step5_hte_subgroup_caption = CopyPair(
-        plain=(
+        signal=(
             "This table splits your data into groups and shows how much each group benefited. "
             "Arrows mark groups that benefited notably more or less than average."
         ),
-        technical=(
+        spectrum=(
             "Quartile-based CATE decomposition per feature. "
             "CIs are averaged within each segment. Arrows flag segments "
             "deviating >10% from the population ATE."
@@ -307,75 +307,75 @@ class _Copy:
 
     # Step 5 — MAB Regret Simulator
     step5_bandit_title = CopyPair(
-        plain="Could smarter traffic allocation have saved time?",
-        technical="Opportunity Cost Analysis (Thompson Sampling Replay)",
+        signal="Could smarter traffic allocation have saved time?",
+        spectrum="Opportunity Cost Analysis (Thompson Sampling Replay)",
     )
     step5_bandit_intro = CopyPair(
-        plain=(
+        signal=(
             "In your test, you split traffic equally — 50% to each option — for the "
             "entire duration. An alternative approach called <em>dynamic allocation</em> "
             "gradually sends more traffic to the option that's performing better, "
             "so you waste less time on a losing option. Here's what that would have "
             "looked like with your data."
         ),
-        technical=(
+        spectrum=(
             "Standard A/B tests use fixed allocation (typically 50/50). Thompson Sampling "
             "adaptively reallocates traffic based on accumulating posterior evidence, "
             "reducing cumulative regret. Below: a replay simulation using your observed data."
         ),
     )
     step5_bandit_reward_title = CopyPair(
-        plain="Cumulative results over time",
-        technical="Cumulative reward: AB vs Thompson Sampling",
+        signal="Cumulative results over time",
+        spectrum="Cumulative reward: AB vs Thompson Sampling",
     )
     step5_bandit_reward_caption = CopyPair(
-        plain=(
+        signal=(
             "The gap between the lines shows how much faster a smart allocation "
             "captures value. The dashed green line is the theoretical best "
             "(all traffic to the winner)."
         ),
-        technical=(
+        spectrum=(
             "Cumulative reward under fixed (50/50) vs adaptive (TS) allocation. "
             "Oracle = all traffic to ex-post winner."
         ),
     )
     step5_bandit_alloc_title = CopyPair(
-        plain="How traffic would have shifted",
-        technical="Allocation trajectory to winning arm",
+        signal="How traffic would have shifted",
+        spectrum="Allocation trajectory to winning arm",
     )
     step5_bandit_alloc_caption = CopyPair(
-        plain=(
+        signal=(
             "A dynamic system starts at 50/50 and gradually sends more users to the "
             "winner as evidence builds. The dashed line shows the equal split your test used."
         ),
-        technical=(
+        spectrum=(
             "Thompson Sampling allocation fraction. "
             "Dashed line = 50% (fixed AB baseline). Convergence defined at ≥75%."
         ),
     )
     step5_bandit_duration_label = CopyPair(
-        plain="Test duration",
-        technical="Periods",
+        signal="Test duration",
+        spectrum="Periods",
     )
     step5_bandit_duration_help = CopyPair(
-        plain="How long the test ran",
-        technical="",
+        signal="How long the test ran",
+        spectrum="",
     )
     step5_bandit_saved_label = CopyPair(
-        plain="Exploration cost recovered",
-        technical="Regret reduction",
+        signal="Exploration cost recovered",
+        spectrum="Regret reduction",
     )
     step5_bandit_saved_help = CopyPair(
-        plain="How much of the wasted traffic a smarter system would have recovered",
-        technical="",
+        signal="How much of the wasted traffic a smarter system would have recovered",
+        spectrum="",
     )
     step5_bandit_convergence_label = CopyPair(
-        plain="Would converge by",
-        technical="Convergence (≥75%)",
+        signal="Would converge by",
+        spectrum="Convergence (≥75%)",
     )
     step5_bandit_convergence_help = CopyPair(
-        plain="When the system would start sending most traffic to the winner",
-        technical="",
+        signal="When the system would start sending most traffic to the winner",
+        spectrum="",
     )
 
 
@@ -388,7 +388,7 @@ class GlossaryEntry:
     term: str
     short: str       # one-liner for the tooltip
     description: str # 2-4 sentences for the drawer / "Learn more"
-    plain_synonym: str = ""   # plain-language alias shown in plain mode
+    signal_synonym: str = ""   # signal-language alias shown in signal mode
     learn_more: str = ""      # citation / URL for deep dives
     first_use: str = ""       # inline hint shown the first time the term appears on a step
 
@@ -397,7 +397,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Core statistical concepts ──
     "p_value": GlossaryEntry(
         term="p-value",
-        plain_synonym="how likely the result is just random noise",
+        signal_synonym="how likely the result is just random noise",
         short="The probability of seeing a result this extreme if the treatment had no effect.",
         description=(
             "If the p-value is small (e.g. < 0.05), the data are unlikely under the assumption of no effect, "
@@ -409,7 +409,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "alpha": GlossaryEntry(
         term="α (significance threshold)",
-        plain_synonym="how much false-positive risk we accept",
+        signal_synonym="how much false-positive risk we accept",
         short="The maximum probability of declaring a 'win' when there is none.",
         description=(
             "α is the false-positive rate we're willing to tolerate. The default 0.05 means we accept a 5% "
@@ -420,7 +420,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "ci": GlossaryEntry(
         term="confidence interval",
-        plain_synonym="the plausible range for the true effect",
+        signal_synonym="the plausible range for the true effect",
         short="The range that contains the true effect with the stated probability (e.g. 95%).",
         description=(
             "A 95% confidence interval means: if we re-ran this experiment many times, 95% of the intervals "
@@ -431,7 +431,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "statistical_significance": GlossaryEntry(
         term="statistical significance",
-        plain_synonym="the result is unlikely to be just noise",
+        signal_synonym="the result is unlikely to be just noise",
         short="The effect is large enough relative to randomness that we consider it real.",
         description=(
             "When we say a result is 'statistically significant', we mean the chance of seeing "
@@ -443,7 +443,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "practical_significance": GlossaryEntry(
         term="practical significance",
-        plain_synonym="whether the effect is big enough to matter",
+        signal_synonym="whether the effect is big enough to matter",
         short="Whether the observed effect is large enough to justify action.",
         description=(
             "A statistically significant result can still be too small to care about. Practical "
@@ -455,7 +455,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "effect_size": GlossaryEntry(
         term="effect size (Cohen's d)",
-        plain_synonym="how big the difference is, in units of noise",
+        signal_synonym="how big the difference is, in units of noise",
         short="A standardised measure of how large the treatment effect is, regardless of sample size.",
         description=(
             "Cohen's d expresses the difference between groups in units of pooled standard deviation. "
@@ -468,7 +468,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Experiment structure ──
     "assignment_column": GlossaryEntry(
         term="assignment column",
-        plain_synonym="the column that says which group each row belongs to",
+        signal_synonym="the column that says which group each row belongs to",
         short="The column in your data that indicates which variant (e.g. Control or Treatment) each unit was in.",
         description=(
             "Also called the 'group column'. This column is what separates your data into the groups you "
@@ -480,7 +480,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "treatment_group": GlossaryEntry(
         term="treatment group",
-        plain_synonym="the group that got the change",
+        signal_synonym="the group that got the change",
         short="The set of units that received the change you're testing.",
         description=(
             "In an experiment, the treatment group is the set of users (or stores, sessions, etc.) "
@@ -491,7 +491,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "control_group": GlossaryEntry(
         term="control group",
-        plain_synonym="the group that did NOT get the change",
+        signal_synonym="the group that did NOT get the change",
         short="The set of units that experienced the original version (no change).",
         description=(
             "The control group serves as the baseline. They saw the existing experience — the old page, "
@@ -503,7 +503,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "outcome_metric": GlossaryEntry(
         term="outcome metric",
-        plain_synonym="the number you're trying to move",
+        signal_synonym="the number you're trying to move",
         short="The measurable quantity you want the experiment to improve (e.g. revenue, clicks, retention).",
         description=(
             "The outcome metric (or 'primary metric') is the number that tells you whether the change "
@@ -515,7 +515,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "ratio_metric": GlossaryEntry(
         term="ratio metric",
-        plain_synonym="a metric that's one number divided by another",
+        signal_synonym="a metric that's one number divided by another",
         short="A metric defined as numerator / denominator (e.g. CTR = clicks / impressions).",
         description=(
             "Ratio metrics like click-through rate (clicks / impressions) or average order value "
@@ -529,7 +529,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Lift ──
     "lift_absolute": GlossaryEntry(
         term="absolute lift",
-        plain_synonym="how much the number changed",
+        signal_synonym="how much the number changed",
         short="The raw difference between the treatment and control averages.",
         description=(
             "Absolute lift = treatment average − control average. If control averaged $100 and "
@@ -540,7 +540,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "lift_relative": GlossaryEntry(
         term="relative lift",
-        plain_synonym="the percentage change",
+        signal_synonym="the percentage change",
         short="The lift expressed as a percentage of the control average.",
         description=(
             "Relative lift = (treatment − control) / control. If control averaged $100 and treatment "
@@ -553,7 +553,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Checks & corrections ──
     "srm": GlossaryEntry(
         term="SRM (Sample Ratio Mismatch)",
-        plain_synonym="the groups aren't sized the way they should be",
+        signal_synonym="the groups aren't sized the way they should be",
         short="A check that the actual control/treatment split matches what was expected.",
         description=(
             "If you randomised 50/50 but observe 47/53, that gap might just be noise — or it might indicate "
@@ -565,7 +565,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "group_balance": GlossaryEntry(
         term="group balance",
-        plain_synonym="whether the groups are similar before the change",
+        signal_synonym="whether the groups are similar before the change",
         short="Whether the control and treatment groups are comparable on observable characteristics.",
         description=(
             "For a fair comparison, the groups should look similar on everything *except* the change "
@@ -577,7 +577,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "delta_method": GlossaryEntry(
         term="Delta Method",
-        plain_synonym="the right way to compare ratios",
+        signal_synonym="the right way to compare ratios",
         short="A variance estimator for ratios (e.g. CTR = clicks/impressions).",
         description=(
             "Naively running a t-test on per-row ratios overstates uncertainty because numerator and "
@@ -590,7 +590,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "bh_correction": GlossaryEntry(
         term="Benjamini-Hochberg correction",
-        plain_synonym="adjusting for testing many things at once",
+        signal_synonym="adjusting for testing many things at once",
         short="Adjusts p-values when you test multiple metrics, controlling the False Discovery Rate.",
         description=(
             "Each independent test at α = 0.05 has a 5% false-positive rate. Test 20 metrics and you'd "
@@ -605,7 +605,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Frameworks & engines ──
     "frequentist_vs_bayesian": GlossaryEntry(
         term="Frequentist vs Bayesian",
-        plain_synonym="two ways to read the evidence",
+        signal_synonym="two ways to read the evidence",
         short="Two statistical frameworks: Frequentist gives p-values; Bayesian gives posterior probabilities.",
         description=(
             "Frequentist tests answer 'how surprising is this data, assuming no effect?' (the p-value). "
@@ -617,7 +617,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "posterior_probability": GlossaryEntry(
         term="posterior probability",
-        plain_synonym="the probability the treatment is better",
+        signal_synonym="the probability the treatment is better",
         short="After seeing the data, the probability that the treatment outperforms control.",
         description=(
             "In Bayesian analysis, the posterior probability answers the question most decision-makers "
@@ -629,7 +629,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "hdi_credible_interval": GlossaryEntry(
         term="HDI (highest density interval)",
-        plain_synonym="the most likely range for the true effect (Bayesian)",
+        signal_synonym="the most likely range for the true effect (Bayesian)",
         short="The narrowest interval that contains a specified fraction (e.g. 95%) of the posterior.",
         description=(
             "The HDI is the Bayesian analogue of a confidence interval. A 95% HDI contains the 95% most "
@@ -641,7 +641,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "rope": GlossaryEntry(
         term="ROPE (Region of Practical Equivalence)",
-        plain_synonym="the range of effects too small to care about",
+        signal_synonym="the range of effects too small to care about",
         short="A pre-defined range around zero within which any effect is 'practically zero'.",
         description=(
             "ROPE is a Bayesian concept for separating statistical from practical significance. "
@@ -655,7 +655,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Causal & observational ──
     "confounder": GlossaryEntry(
         term="confounder",
-        plain_synonym="a factor that affects both the treatment and the outcome",
+        signal_synonym="a factor that affects both the treatment and the outcome",
         short="A variable that influences both who gets the treatment and the outcome, creating a spurious association.",
         description=(
             "Confounders create the illusion of an effect where none exists (or hide a real one). "
@@ -667,7 +667,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "randomization": GlossaryEntry(
         term="randomization",
-        plain_synonym="randomly assigning units to groups",
+        signal_synonym="randomly assigning units to groups",
         short="The process of randomly assigning units to treatment or control.",
         description=(
             "Randomization is the gold standard for causal inference because it ensures, on average, "
@@ -679,7 +679,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "counterfactual": GlossaryEntry(
         term="counterfactual",
-        plain_synonym="what would have happened without the change",
+        signal_synonym="what would have happened without the change",
         short="The outcome that would have occurred in the absence of the treatment.",
         description=(
             "The fundamental question of causal inference: what would the outcome have been if the "
@@ -693,7 +693,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Time-series ──
     "pre_post_period": GlossaryEntry(
         term="pre-period / post-period",
-        plain_synonym="before and after the change",
+        signal_synonym="before and after the change",
         short="The time before the intervention (pre) and after it (post).",
         description=(
             "In time-series analysis, the pre-period is the time before the change was introduced. "
@@ -705,7 +705,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     ),
     "intervention_date": GlossaryEntry(
         term="intervention date",
-        plain_synonym="the date the change went live",
+        signal_synonym="the date the change went live",
         short="The specific date when the treatment or change was introduced.",
         description=(
             "In time-series analysis, the intervention date splits the data into a pre-period "
@@ -719,7 +719,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Variance reduction ──
     "cuped": GlossaryEntry(
         term="CUPED (covariate adjustment)",
-        plain_synonym="using pre-experiment data to reduce noise",
+        signal_synonym="using pre-experiment data to reduce noise",
         short="A variance reduction technique that subtracts predictable variation from each unit's outcome.",
         description=(
             "If users had measurable behaviour *before* the experiment (e.g. last 30 days of revenue), "
@@ -734,7 +734,7 @@ GLOSSARY: dict[str, GlossaryEntry] = {
     # ── Power ──
     "power_mde": GlossaryEntry(
         term="power / MDE",
-        plain_synonym="whether the test can detect an effect this small",
+        signal_synonym="whether the test can detect an effect this small",
         short="The probability the test detects a real effect (power), and the smallest effect it can detect (MDE).",
         description=(
             "Power (typically 80%) is the probability of correctly detecting a real effect. "
@@ -752,29 +752,29 @@ GLOSSARY: dict[str, GlossaryEntry] = {
 class MethodBlurb:
     """Voice-aware description and assumptions for a single analysis method."""
     display_name: str
-    plain: str              # 1-2 sentence "what is this for" in business language
-    technical: str           # same, in statistical language
-    assumptions_plain: str   # what the method needs to be valid, business language
-    assumptions_technical: str  # same, statistical language
+    signal: str              # 1-2 sentence "what is this for" in business language
+    spectrum: str           # same, in statistical language
+    assumptions_signal: str   # what the method needs to be valid, business language
+    assumptions_spectrum: str  # same, statistical language
 
 
 METHOD_BLURBS: dict[str, MethodBlurb] = {
     "A/B Test": MethodBlurb(
         display_name="A/B Test",
-        plain=(
+        signal=(
             "Compares outcomes between two groups — the ones who got the change and the "
             "ones who didn't. Best when you randomly assigned units to each group."
         ),
-        technical=(
+        spectrum=(
             "Two groups, randomised. We compare averages with Welch's t-test "
             "(robust to unequal variances) and apply the Delta Method for ratio "
             "metrics so confidence intervals stay valid."
         ),
-        assumptions_plain=(
+        assumptions_signal=(
             "Assumes the assignment to groups was random or random-like. "
             "If it wasn't, consider Causal Inference instead."
         ),
-        assumptions_technical=(
+        assumptions_spectrum=(
             "Requires randomised assignment (SUTVA, no interference). "
             "Welch's t-test is robust to unequal variances. "
             "Ratio metrics get Delta-method SEs."
@@ -782,43 +782,43 @@ METHOD_BLURBS: dict[str, MethodBlurb] = {
     ),
     "Time-Series Intervention": MethodBlurb(
         display_name="Time-Series Intervention",
-        plain=(
+        signal=(
             "Measures the impact of a change by comparing what happened after the "
             "change date to what would have happened without it. Best when you "
             "rolled something out to everyone on a specific date."
         ),
-        technical=(
+        spectrum=(
             "A single series with a known intervention date. We fit a counterfactual "
             "to the pre-period, then compare it against the observed post-period."
         ),
-        assumptions_plain=(
+        assumptions_signal=(
             "Assumes nothing else changed on or around the intervention date that could "
             "also affect the metric. If another campaign launched the same week, the "
             "estimate may be confounded."
         ),
-        assumptions_technical=(
+        assumptions_spectrum=(
             "Assumes stable pre-period dynamics, no concurrent confounding interventions, "
             "and sufficient pre-period data for counterfactual estimation."
         ),
     ),
     "Causal Inference": MethodBlurb(
         display_name="Observational Causal Inference",
-        plain=(
+        signal=(
             "Estimates the effect of a change even when you didn't randomly assign who got it. "
             "Uses other measured factors (like demographics or prior behaviour) to adjust for "
             "differences between the groups."
         ),
-        technical=(
+        spectrum=(
             "No randomisation, but treatment, outcome, and plausible confounders are all "
             "observed. We use DoWhy to identify a valid estimand and EconML's Double "
             "Machine Learning to estimate it."
         ),
-        assumptions_plain=(
+        assumptions_signal=(
             "Assumes you've included every important factor that affects both who got the "
             "treatment and the outcome. If there's a hidden factor you haven't measured, "
             "the result may be wrong."
         ),
-        assumptions_technical=(
+        assumptions_spectrum=(
             "Requires conditional ignorability (no unmeasured confounders). "
             "DML uses cross-fitting for doubly-robust estimation. "
             "Sensitive to model specification if overlap is poor."
@@ -826,16 +826,16 @@ METHOD_BLURBS: dict[str, MethodBlurb] = {
     ),
     "Exploratory": MethodBlurb(
         display_name="Exploratory mode",
-        plain=(
+        signal=(
             "We can't identify a clear experiment structure in this data. We'll surface "
             "distributions and patterns to help you understand the dataset before "
             "designing a test."
         ),
-        technical=(
+        spectrum=(
             "We can't infer a clear experimental structure. Surface distributions "
             "and correlations to understand the data before designing a test."
         ),
-        assumptions_plain="No statistical assumptions — this is descriptive, not inferential.",
-        assumptions_technical="Descriptive only. No causal or inferential claims.",
+        assumptions_signal="No statistical assumptions — this is descriptive, not inferential.",
+        assumptions_spectrum="Descriptive only. No causal or inferential claims.",
     ),
 }

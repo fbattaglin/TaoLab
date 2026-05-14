@@ -27,7 +27,7 @@ def render_variant_setup(
     default_control: Any,
     default_treatment: Any,
     *,
-    voice: Voice = "plain",
+    voice: Voice = "signal",
 ) -> Tuple[str, Any, Any]:
     sel_a, sel_b, sel_c = st.columns(3)
     with sel_a:
@@ -37,7 +37,7 @@ def render_variant_setup(
             index=df.columns.index(default_assignment) if default_assignment in df.columns else 0,
             help="The column that says which variant each unit was put into.",
         )
-        if voice == "plain":
+        if voice == "signal":
             helper_caption(
                 "The column that says which group each row belongs to "
                 "— e.g. Control vs Treatment, A vs B."
@@ -51,7 +51,7 @@ def render_variant_setup(
             index=ctrl_idx,
             help="The group that did NOT receive the change.",
         )
-        if voice == "plain":
+        if voice == "signal":
             helper_caption("The group that did NOT receive the change — the baseline.")
     with sel_c:
         candidates = [v for v in unique_vals if v != control_val]
@@ -62,7 +62,7 @@ def render_variant_setup(
             index=treat_idx if candidates else 0,
             help="The group that received the change you're testing.",
         )
-        if voice == "plain":
+        if voice == "signal":
             helper_caption("The group that received the change you're testing.")
 
     # Live sample-size preview cards.
@@ -75,7 +75,7 @@ def render_variant_setup(
 
     if n_c and n_t:
         ratio = n_c / (n_c + n_t)
-        if voice == "plain":
+        if voice == "signal":
             msg = (
                 f"Comparing <strong>{n_t:,} rows</strong> in the Treatment group "
                 f"vs <strong>{n_c:,} rows</strong> in the Control group "

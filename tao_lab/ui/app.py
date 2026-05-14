@@ -49,17 +49,17 @@ with header_left:
 with header_right:
     voice_choice = st.radio(
         "Reader",
-        options=("Plain", "Technical"),
-        index=0 if state.voice == "plain" else 1,
+        options=("Signal", "Spectrum"),
+        index=0 if state.voice == "signal" else 1,
         horizontal=True,
         label_visibility="collapsed",
         key="tl_voice_radio",
         help=(
-            "Plain: business-language explanations. "
-            "Technical: statistical detail (t-stats, effect sizes, raw p-values)."
+            "Signal: The Boardroom perspective. Clear verdicts and business impact. "
+            "Spectrum: The Lab perspective. Full statistical rigor and diagnostic depth."
         ),
     )
-    new_voice = "plain" if voice_choice == "Plain" else "technical"
+    new_voice = "signal" if voice_choice == "Signal" else "spectrum"
     if new_voice != state.voice:
         state.voice = new_voice
         st.rerun()

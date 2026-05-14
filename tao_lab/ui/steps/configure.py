@@ -340,7 +340,7 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
     voice = s.voice
 
     _eyebrow("Treatment, outcome, and confounders")
-    if voice == "plain":
+    if voice == "signal":
         helper_caption(
             "Causal inference estimates the effect of a change even when assignment wasn't random "
             "— but it needs you to include every factor that might affect both who got the treatment "
@@ -366,7 +366,7 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
             index=treat_idx,
             help="The column that indicates who received the treatment.",
         )
-        if voice == "plain":
+        if voice == "signal":
             helper_caption("The column indicating who received the change (0/1 or similar).")
 
         default_outcomes = hint.get("metrics", [])
@@ -382,14 +382,14 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
     with c2:
         default_covariates = hint.get("covariates", [])
         available_covariates = [c for c in df.columns if c not in [treatment_col, outcome_col]]
-        confounders_label = "Confounders" if voice == "plain" else "Confounders (W)"
+        confounders_label = "Confounders" if voice == "signal" else "Confounders (W)"
         covariates = st.multiselect(
             confounders_label,
             available_covariates,
             default=[c for c in default_covariates if c in available_covariates],
             help="Variables that plausibly affect both treatment and outcome.",
         )
-        if voice == "plain":
+        if voice == "signal":
             helper_caption(
                 "Factors that might affect both who got the treatment and the outcome. "
                 "Including them helps isolate the true effect of the change."
@@ -409,8 +409,8 @@ def _render_causal_form(s: wstate.WizardState, hint: dict) -> None:
         )
         if hte_enabled:
             helper_caption(copy.step3_hte_help(voice))
-            # Advanced: let technical users customize effect modifiers
-            if voice == "technical":
+            # Advanced: let experts customize effect modifiers
+            if voice == "spectrum":
                 with st.expander("Advanced: separate effect modifiers from confounders", expanded=False):
                     hte_features = st.multiselect(
                         copy.step3_hte_features_label(voice),
@@ -581,11 +581,11 @@ def _render_timeseries_chart(
         hovermode="x unified",
     )
 
-    label = "plain" if voice == "plain" else "technical"
+    label = "signal" if voice == "signal" else "spectrum"
     caption = (
         f"**{metric_label}** over time. "
         "The dashed line marks the intervention date — drag the date picker above to explore different splits."
-    ) if label == "plain" else (
+    ) if label == "signal" else (
         f"**{metric_label}** time series. Pre-period (indigo) feeds the counterfactual model; "
         "post-period (tangerine) is compared against it."
     )
@@ -611,7 +611,7 @@ def _render_why_settings(hint: dict, voice: str) -> None:
     parts = []
     if hint.get("assignment_col"):
         col_name = hint["assignment_col"]
-        if voice == "plain":
+        if voice == "signal":
             parts.append(
                 f"We detected <strong>{col_name}</strong> as the group column "
                 f"because it has a small number of distinct values."
@@ -624,7 +624,7 @@ def _render_why_settings(hint: dict, voice: str) -> None:
 
     if hint.get("metric_cols"):
         metrics = hint["metric_cols"]
-        if voice == "plain":
+        if voice == "signal":
             parts.append(
                 f"We found {len(metrics)} numeric column{'s' if len(metrics) != 1 else ''} "
                 f"that look like outcome metrics: {', '.join(metrics)}."
@@ -635,7 +635,7 @@ def _render_why_settings(hint: dict, voice: str) -> None:
             )
 
     if hint.get("timestamp_col"):
-        if voice == "plain":
+        if voice == "signal":
             parts.append(
                 f"We detected <strong>{hint['timestamp_col']}</strong> as a date column."
             )
@@ -653,7 +653,7 @@ def _render_why_settings(hint: dict, voice: str) -> None:
 def _render_business_impact_inputs(voice: str, key_suffix: str) -> tuple[float | None, int | None]:
     st.markdown("<div style='height:1.25rem'></div>", unsafe_allow_html=True)
     
-    label = "Business Impact Simulation (Optional)" if voice == "plain" else "Decision Intelligence / ROI (Optional)"
+    label = "Business Impact Simulation (Optional)" if voice == "signal" else "Decision Intelligence / ROI (Optional)"
     with st.expander(label, expanded=False):
         helper_caption(
             "Map your primary metric to dollars to simulate the expected ROI and Risk of a full rollout."

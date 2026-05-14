@@ -31,7 +31,7 @@ def render_metric_picker(
     default_metrics: List[str],
     default_ratios: List[dict],
     *,
-    voice: Voice = "plain",
+    voice: Voice = "signal",
 ) -> tuple[List[str], List[RatioMetric]]:
     numeric_cols = [c for c in df.columns if df.schema[c].is_numeric()]
     metric_cols = st.multiselect(
@@ -40,7 +40,7 @@ def render_metric_picker(
         default=[c for c in default_metrics if c in numeric_cols],
         help=copy.step3_outcome_help(voice),
     )
-    if voice == "plain":
+    if voice == "signal":
         helper_caption(
             "Pick the numbers you want to compare between the groups "
             "— e.g. revenue, sessions, time on page."
@@ -98,7 +98,7 @@ def _render_distribution_preview(df: pl.DataFrame, cols: List[str]) -> None:
 
 
 def _histogram_summary(arr: np.ndarray, col_name: str) -> str:
-    """One-line plain-language summary of a distribution."""
+    """One-line signal-language summary of a distribution."""
     if len(arr) == 0:
         return ""
     try:

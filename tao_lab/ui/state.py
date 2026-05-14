@@ -64,7 +64,7 @@ class WizardState:
     bandit_replay: Optional[BanditReplayResult] = None  # MAB regret simulation
 
     # Cross-cutting (Phase B/C will use this — kept here for forward compat)
-    voice: str = "plain"  # plain | technical
+    voice: str = "signal"  # signal | spectrum
 
     # Dataset-specific hints (populated when a sample chip is loaded)
     # Keys: "intervention_date" (ISO str), "intervention_label" (display str), etc.

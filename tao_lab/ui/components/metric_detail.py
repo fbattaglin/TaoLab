@@ -4,7 +4,7 @@ Each row shows: metric name + significance icon, relative lift, raw p-value,
 and a 'Read more' expander revealing the full statistical row (control vs
 treatment means, raw + BH-adjusted p, CI, n, test stat, effect size).
 
-Phase 4: voice-aware labels for plain/technical modes.
+Phase 4: voice-aware labels for plain/spectrum modes.
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ _DANGER = "#DC2626"
 _SLATE = "#475569"
 
 
-def render_metric_details(result: AnalysisResult, *, voice: Voice = "plain") -> None:
+def render_metric_details(result: AnalysisResult, *, voice: Voice = "signal") -> None:
     if not result.metrics:
         st.caption("No metrics to display.")
         return
@@ -39,11 +39,11 @@ def _render_row(m: MetricResult, *, voice: Voice) -> None:
     certainty_header = copy.step5_pvalue_label(voice)
     p_str = f"{m.p_value:.4g}" if m.p_value is not None else "—"
 
-    # ── Plain one-liner summary ──
-    plain_summary = ""
-    if voice == "plain":
+    # ── Signal one-liner summary ──
+    signal_summary = ""
+    if voice == "signal":
         direction = "higher" if m.lift_relative > 0 else "lower" if m.lift_relative < 0 else "the same"
-        plain_summary = (
+        signal_summary = (
             f"<div class='tl-text-slate' style='font-size:.82rem;margin-top:.4rem;"
             f"line-height:1.4;'>"
             f"The treatment group averaged {m.treatment_mean:.4g} vs {m.control_mean:.4g} "
@@ -78,7 +78,7 @@ def _render_row(m: MetricResult, *, voice: Voice) -> None:
               </div>
             </div>
           </div>
-          {plain_summary}
+          {signal_summary}
         </div>
         """,
         unsafe_allow_html=True,
@@ -91,7 +91,7 @@ def _render_row(m: MetricResult, *, voice: Voice) -> None:
             st.caption(m.warning_message)
 
 
-def _significance_badge(m: MetricResult, *, voice: Voice = "plain") -> tuple[str, str, str]:
+def _significance_badge(m: MetricResult, *, voice: Voice = "signal") -> tuple[str, str, str]:
     if m.is_significant:
         label = copy.step5_sig_yes(voice)
         return _SUCCESS, label, "●"
@@ -101,9 +101,9 @@ def _significance_badge(m: MetricResult, *, voice: Voice = "plain") -> tuple[str
     return _SLATE, label, "○"
 
 
-def _detail_rows(m: MetricResult, *, voice: Voice = "plain") -> list[dict]:
+def _detail_rows(m: MetricResult, *, voice: Voice = "signal") -> list[dict]:
     fmt = lambda x, spec=".4g": format(x, spec) if x is not None else "—"
-    if voice == "plain":
+    if voice == "signal":
         rows = [
             {"Quantity": "Average (group without the change)", "Value": fmt(m.control_mean)},
             {"Quantity": "Average (group with the change)", "Value": fmt(m.treatment_mean)},

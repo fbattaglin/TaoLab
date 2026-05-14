@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tao Lab is a modular, statistically rigorous experimentation platform that serves two audiences simultaneously: data scientists (full statistical detail) and business users (plain-language interpretation). It bridges simple A/B testing scripts and complex causal inference libraries via a unified plugin interface for analysis, diagnosis, and interpretation.
+Tao Lab is a modular, statistically rigorous experimentation platform that serves two audiences simultaneously: data scientists (full statistical detail) and business users (signal-language interpretation). It bridges simple A/B testing scripts and complex causal inference libraries via a unified plugin interface for analysis, diagnosis, and interpretation.
 
 ## Commands
 
@@ -74,21 +74,21 @@ Pydantic models (`ExperimentConfig`, `AnalysisResult`, `MetricResult`, `RatioMet
 
 ### Dual-Audience Content System (Phase 4)
 
-The app serves Plain and Technical readers at equal depth. Three content layers live in `tao_lab/ui/strings.py`:
+The app serves Signal and Spectrum readers at equal depth. Three content layers live in `tao_lab/ui/strings.py`:
 
 **1. `CopyPair` — voice-aware microcopy**
 ```python
-label = CopyPair(plain="Group column", technical="Assignment column")
-label("plain")  # → "Group column"
-label("technical")  # → "Assignment column"
+label = CopyPair(signal="Group column", spectrum="Assignment column")
+label("signal")  # → "Group column"
+label("spectrum")  # → "Assignment column"
 ```
 `copy = _Copy()` is the singleton. All step files import `copy` from `strings.py`. Add new pairs to `_Copy` when any label needs to differ by audience.
 
 **2. `GlossaryEntry` — structured term definitions**
-Each entry has `term`, `short` (tooltip), `description` (drawer), `plain_synonym`, `first_use` (shown once per step on first appearance), and `learn_more` (citation URL). 28 entries cover all major statistical terms. Used by `explainer.py` helpers.
+Each entry has `term`, `short` (tooltip), `description` (drawer), `signal_synonym`, `first_use` (shown once per step on first appearance), and `learn_more` (citation URL). 28 entries cover all major statistical terms. Used by `explainer.py` helpers.
 
 **3. `MethodBlurb` / `METHOD_BLURBS` — voice-aware method descriptions**
-Central source for method card content. Each blurb has `display_name`, `plain`, `technical`, `assumptions_plain`, `assumptions_technical`. `method_card.py` imports from here — do not maintain separate blurb dicts in component files.
+Central source for method card content. Each blurb has `display_name`, `signal`, `spectrum`, `assumptions_signal`, `assumptions_spectrum`. `method_card.py` imports from here — do not maintain separate blurb dicts in component files.
 
 ### Explainer / Inline Education System (`tao_lab/ui/components/explainer.py`)
 
@@ -101,15 +101,15 @@ Four building blocks for inline education:
 | `concept_drawer(key, *, use_when, avoid_when, data_context)` | Enhanced expander with use/avoid guidance, worked example from user data, and citation link |
 | `helper_caption(text)` | Small italic explanatory caption |
 
-### Narrator Plain Mode (`tao_lab/interpret/narrator.py`)
+### Narrator Signal Mode (`tao_lab/interpret/narrator.py`)
 
-Plain-mode narration follows a three-line decision template — distinct from the technical register which stays unchanged:
+Signal-mode narration follows a three-line decision template — distinct from the spectrum register which stays unchanged:
 
 - **Line 1 (What happened)**: `"The treatment group had {abs_lift} more/less {metric} on average ({treatment_mean} vs {control_mean})."`
 - **Line 2 (How sure)**: `"We're {confidence_word} confident the real effect is between {ci_lower} and {ci_upper} (95% confidence interval)."`
 - **Line 3 (Decision relevance)**: drawn from the recommendation field.
 
-`_confidence_word(p)` maps p-values → "very confident / quite confident / fairly confident / somewhat confident / not confident". Technical mode functions are byte-for-byte unchanged.
+`_confidence_word(p)` maps p-values → "very confident / quite confident / fairly confident / somewhat confident / not confident". Spectrum mode functions are byte-for-byte unchanged.
 
 ### Diagnosis Engine (Phase D)
 
@@ -142,7 +142,7 @@ return None  # stale — ignore
 ### Prescription Model (`tao_lab/interpret/narrator.py`)
 
 `PrescriptionNarration` is the canonical structured output that drives Step 5:
-- **Rule-driven fields**: `verdict` ("ship"/"hold"/"dont_ship"), `confidence`, `confidence_score`, `headline`, `caveats`, `next_steps_plain`, `next_steps_technical` — deterministic, based on p-values and effect size thresholds.
+- **Rule-driven fields**: `verdict` ("ship"/"hold"/"dont_ship"), `confidence`, `confidence_score`, `headline`, `caveats`, `next_steps_signal`, `next_steps_spectrum` — deterministic, based on p-values and effect size thresholds.
 - **Optional LLM-enhanced fields**: `diagnosis`, `recommendation` — enriched via Claude API if `ANTHROPIC_API_KEY` is set; template fallback otherwise.
 - **HTE field**: `hte_summary: Optional[TextPair]` — populated only when `result.hte` is not None.
 - **Bandit field**: `bandit_summary: Optional[TextPair]` — populated when MAB replay simulation ran successfully.
@@ -177,7 +177,7 @@ HTE is an optional mode within Causal Inference, not a separate method. When ena
 
 **UI flow:** Step 2 badge on Causal card → Step 3 checkbox toggle → Step 4 dual-model fit → Step 5 "Who benefits most?" section with feature importance bar chart, CATE histogram, and subgroup table.
 
-**Architecture:** LinearDML provides ATE (more efficient, lower variance). CausalForestDML provides CATE (heterogeneity detection). Both run independently; ATE is reported from LinearDML, CATE from the forest. Effect modifiers (X) default to confounders (W) but can be customized in technical mode.
+**Architecture:** LinearDML provides ATE (more efficient, lower variance). CausalForestDML provides CATE (heterogeneity detection). Both run independently; ATE is reported from LinearDML, CATE from the forest. Effect modifiers (X) default to confounders (W) but can be customized in spectrum mode.
 
 ### MAB Regret Simulator (`tao_lab/methods/bandit_replay.py`)
 
@@ -193,7 +193,7 @@ Not a Method subclass — a **post-hoc insight** that appears in Step 5 for A/B 
 
 **Key model:** `BanditReplayResult` in `base.py`. Stored on `WizardState.bandit_replay`. Step 5 renders a didactic section with two Plotly charts (cumulative reward + allocation trajectory) and key numbers (duration, regret reduction, convergence).
 
-**Narration:** `_build_bandit_narration()` in `narrator.py` produces a `TextPair` with plain/technical descriptions. Plain mode explains the concept; technical mode reports numbers (mode, metric_type, cumulative regret delta).
+**Narration:** `_build_bandit_narration()` in `narrator.py` produces a `TextPair` with signal/spectrum descriptions. Signal mode explains the concept; spectrum mode reports numbers (mode, metric_type, cumulative regret delta).
 
 ## Implementation Rules
 
@@ -203,7 +203,7 @@ Not a Method subclass — a **post-hoc insight** that appears in Step 5 for A/B 
 4. **Structured Results**: Use the existing Pydantic models for all result objects; do not return raw dicts.
 5. **Config hints flow downstream**: `MethodCandidate.config_hint` is the contract between the diagnosis engine and the configure step. Keys like `timestamp_col`, `date_format`, `assignment_col`, `metric_cols`, `covariates` must be set correctly in each `_score_*()` function so Step 3 pre-populates correctly without requiring user re-entry.
 6. **Voice threading**: Every UI component that renders user-visible text accepts a `voice: Voice` parameter and uses `copy.<key>(voice)` for labels. Never hard-code English strings that a business user would read — add a `CopyPair` instead.
-7. **Street-cred preservation**: Technical mode shows identical numbers, precision (3–4 sig figs), and terminology to the original implementation. p-values, CI bounds, effect sizes are never hidden — they may be secondary in plain mode but always accessible via "Show details" or tooltip.
+7. **Street-cred preservation**: Spectrum mode shows identical numbers, precision (3–4 sig figs), and terminology to the original implementation. p-values, CI bounds, effect sizes are never hidden — they may be secondary in signal mode but always accessible via "Show details" or tooltip.
 
 ## UI Standards
 
@@ -216,7 +216,7 @@ Not a Method subclass — a **post-hoc insight** that appears in Step 5 for A/B 
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `voice` | `"plain" \| "technical"` | Reader mode, flows to every component |
+| `voice` | `"signal" \| "spectrum"` | Reader mode, flows to every component |
 | `business_question` | `Optional[str]` | Free-form question entered on Step 1; included in Markdown and PDF exports |
 | `selected_candidate_idx` | `int` | Which ranked method candidate the user chose (not always rank-0) |
 | `engine` | `str` | `"Frequentist"` or `"Bayesian (NumPyro)"` for A/B tests |

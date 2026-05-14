@@ -52,7 +52,7 @@ def to_markdown(
     result: AnalysisResult,
     narration: PrescriptionNarration,
     *,
-    voice: str = "plain",
+    voice: str = "signal",
     business_question: str = "",
     bandit_replay: Optional[BanditReplayResult] = None,
 ) -> str:
@@ -115,7 +115,7 @@ def to_pdf_bytes(
     result: AnalysisResult,
     narration: PrescriptionNarration,
     *,
-    voice: str = "plain",
+    voice: str = "signal",
     business_question: str = "",
 ) -> Optional[bytes]:
     """Return a single-page A4 PDF of the prescription, or None if WeasyPrint
@@ -136,9 +136,9 @@ def _render_html(
     voice: str,
     business_question: str = "",
 ) -> str:
-    pick = (lambda pair: pair.plain) if voice == "plain" else (lambda pair: pair.technical)
+    pick = (lambda pair: pair.signal) if voice == "signal" else (lambda pair: pair.spectrum)
     next_steps = (
-        narration.next_steps_plain if voice == "plain" else narration.next_steps_technical
+        narration.next_steps_signal if voice == "signal" else narration.next_steps_spectrum
     )
 
     verdict_label = _VERDICT_LABEL[narration.verdict]
@@ -150,7 +150,7 @@ def _render_html(
 
     caveat_html = ""
     for c in narration.caveats:
-        body = c.body_plain if voice == "plain" else c.body_technical
+        body = c.body_signal if voice == "signal" else c.body_spectrum
         caveat_html += (
             f'<div class="caveat caveat--{c.severity}">'
             f"<div class=\"caveat__title\">{html.escape(c.title)}</div>"

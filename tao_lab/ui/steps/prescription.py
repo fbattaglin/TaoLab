@@ -136,6 +136,11 @@ def render() -> None:
     )
     render_metric_details(result, voice=voice)
 
+    # ── MAB Regret Simulator section ──
+    if s.bandit_replay is not None:
+        st.markdown("<hr class='tl-divider'>", unsafe_allow_html=True)
+        _render_bandit_section(s, p, voice)
+
     # ── HTE section (when available) ──
     if result.hte is not None:
         st.markdown("<hr class='tl-divider'>", unsafe_allow_html=True)
@@ -506,11 +511,258 @@ def _render_hte_subgroup_table(hte, voice: str) -> None:
     st.dataframe(rows, use_container_width=True, hide_index=True)
 
 
+# ─────────────────────────── MAB Regret Simulator ───────────────────────────
+def _render_bandit_section(
+    s: wstate.WizardState,
+    prescription: PrescriptionNarration,
+    voice: str,
+) -> None:
+    """Render the 'Could smarter allocation have saved time?' section."""
+    br = s.bandit_replay
+    if br is None:
+        return
+
+    # ── Section title ──
+    st.markdown(
+        f"<div class='tl-text-deep' style='font-weight:600;font-size:1.15rem;"
+        f"margin:0 0 .5rem;'>{copy.step5_bandit_title(voice)}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Didactic intro ──
+    st.markdown(
+        f"<div style='font-size:.92rem;line-height:1.55;color:var(--tl-slate);"
+        f"margin-bottom:1rem;max-width:80ch;'>{copy.step5_bandit_intro(voice)}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Narration ──
+    if prescription.bandit_summary is not None:
+        narr_text = (
+            prescription.bandit_summary.plain
+            if voice == "plain"
+            else prescription.bandit_summary.technical
+        )
+        st.markdown(
+            f"<div style='font-size:.92rem;line-height:1.55;color:#0F172A;"
+            f"margin-bottom:1.25rem;max-width:80ch;'>{narr_text}</div>",
+            unsafe_allow_html=True,
+        )
+
+    # ── Charts (two columns) ──
+    col_reward, col_alloc = st.columns([1, 1], gap="large")
+
+    with col_reward:
+        st.markdown(
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .5rem;'>"
+            f"{copy.step5_bandit_reward_title(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+        _render_bandit_reward_chart(br)
+        st.caption(copy.step5_bandit_reward_caption(voice))
+
+    with col_alloc:
+        st.markdown(
+            f"<div class='tl-text-deep' style='font-weight:500;margin:0 0 .5rem;'>"
+            f"{copy.step5_bandit_alloc_title(voice)}</div>",
+            unsafe_allow_html=True,
+        )
+        _render_bandit_allocation_chart(br)
+        st.caption(copy.step5_bandit_alloc_caption(voice))
+
+    # ── Key numbers card ──
+    _render_bandit_key_numbers(br, voice)
+
+
+def _render_bandit_reward_chart(br) -> None:
+    """Cumulative reward: AB vs TS vs Optimal."""
+    import plotly.graph_objects as go
+
+    labels = br.period_labels
+    fig = go.Figure()
+
+    # AB line
+    fig.add_trace(go.Scatter(
+        x=labels, y=br.cumulative_ab,
+        mode="lines",
+        name="Your A/B Test",
+        line=dict(color="#475569", width=2),
+    ))
+
+    # Bandit line
+    fig.add_trace(go.Scatter(
+        x=labels, y=br.cumulative_bandit,
+        mode="lines",
+        name="Dynamic Allocation",
+        line=dict(color="#F97316", width=2.5),
+    ))
+
+    # Optimal line
+    fig.add_trace(go.Scatter(
+        x=labels, y=br.cumulative_optimal,
+        mode="lines",
+        name="Best Possible",
+        line=dict(color="#059669", width=1.5, dash="dash"),
+    ))
+
+    fig.update_layout(
+        height=280,
+        margin=dict(l=0, r=0, t=10, b=0),
+        xaxis_title="",
+        yaxis_title="Cumulative reward",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#F8FAFC",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            font_size=11,
+        ),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+    )
+    # Reduce x-axis clutter for many labels
+    if len(labels) > 15:
+        fig.update_xaxes(tickangle=-45, nticks=10)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def _render_bandit_allocation_chart(br) -> None:
+    """Allocation trajectory to the winning arm over time."""
+    import plotly.graph_objects as go
+
+    labels = br.period_labels
+    alloc_pct = [a * 100 for a in br.allocation_to_winner]
+
+    fig = go.Figure()
+
+    # Fill area between 50% and the allocation line
+    fig.add_trace(go.Scatter(
+        x=labels, y=[50] * len(labels),
+        mode="lines",
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=labels, y=alloc_pct,
+        mode="lines",
+        name="Allocation to winner",
+        line=dict(color="#F97316", width=2.5),
+        fill="tonexty",
+        fillcolor="rgba(249, 115, 22, 0.12)",
+    ))
+
+    # 50% dashed reference
+    fig.add_hline(
+        y=50,
+        line_dash="dash",
+        line_color="#94A3B8",
+        line_width=1,
+        annotation_text="Equal split (A/B)",
+        annotation_position="bottom right",
+        annotation_font_size=10,
+        annotation_font_color="#94A3B8",
+    )
+
+    # 75% convergence threshold
+    fig.add_hline(
+        y=75,
+        line_dash="dot",
+        line_color="#059669",
+        line_width=1,
+        annotation_text="Convergence (75%)",
+        annotation_position="top right",
+        annotation_font_size=10,
+        annotation_font_color="#059669",
+    )
+
+    fig.update_layout(
+        height=280,
+        margin=dict(l=0, r=0, t=10, b=0),
+        xaxis_title="",
+        yaxis_title="% traffic to winner",
+        yaxis=dict(range=[0, 105]),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#F8FAFC",
+        showlegend=False,
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+    )
+    if len(labels) > 15:
+        fig.update_xaxes(tickangle=-45, nticks=10)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def _render_bandit_key_numbers(br, voice: str) -> None:
+    """Three-column key numbers: Duration, Regret Saved, Convergence."""
+    period_word = "days" if br.mode == "daily" else "batches"
+    duration_val = f"{br.n_periods} {period_word}"
+    saved_val = f"{br.regret_saved_pct:.0%}"
+    saved_sub = f"≈ {br.regret_saved:,.0f} units of {br.metric_name}"
+
+    if br.convergence_period is not None:
+        conv_val = (
+            f"Day {br.convergence_period}" if br.mode == "daily"
+            else f"Batch {br.convergence_period}"
+        )
+    else:
+        conv_val = "—"
+
+    # Helper captions only in plain mode
+    dur_help = copy.step5_bandit_duration_help(voice)
+    saved_help = copy.step5_bandit_saved_help(voice)
+    conv_help = copy.step5_bandit_convergence_help(voice)
+
+    def _helper_html(text: str) -> str:
+        if not text:
+            return ""
+        return (
+            f"<div style='font-size:.7rem;color:#94A3B8;margin-top:.25rem;"
+            f"font-style:italic;'>{text}</div>"
+        )
+
+    st.markdown(
+        f"""<div class="tl-card" style="display:flex;justify-content:space-around;
+                text-align:center;padding:1.25rem 1rem;margin-top:.75rem;flex-wrap:wrap;gap:1rem;">
+          <div style="min-width:100px;">
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;
+                        color:var(--tl-tangerine);font-weight:600;margin-bottom:.25rem;">
+              {copy.step5_bandit_duration_label(voice)}
+            </div>
+            <div style="font-size:1.4rem;font-weight:700;color:#0F172A;">{duration_val}</div>
+            {_helper_html(dur_help)}
+          </div>
+          <div style="min-width:120px;">
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;
+                        color:var(--tl-tangerine);font-weight:600;margin-bottom:.25rem;">
+              {copy.step5_bandit_saved_label(voice)}
+            </div>
+            <div style="font-size:1.4rem;font-weight:700;color:var(--tl-success);">{saved_val}</div>
+            <div style="font-size:.75rem;color:var(--tl-slate);margin-top:.1rem;">{saved_sub}</div>
+            {_helper_html(saved_help)}
+          </div>
+          <div style="min-width:100px;">
+            <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;
+                        color:var(--tl-tangerine);font-weight:600;margin-bottom:.25rem;">
+              {copy.step5_bandit_convergence_label(voice)}
+            </div>
+            <div style="font-size:1.4rem;font-weight:700;color:#0F172A;">{conv_val}</div>
+            {_helper_html(conv_help)}
+          </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
 # ─────────────────────────── Export rail ───────────────────────────
 def _render_export_rail(s: wstate.WizardState) -> None:
     """Stacked export download buttons in the right rail."""
     bq = s.business_question or ""
-    md = to_markdown(s.result, s.prescription, voice=s.voice, business_question=bq)
+    md = to_markdown(
+        s.result, s.prescription, voice=s.voice,
+        business_question=bq, bandit_replay=s.bandit_replay,
+    )
 
     st.download_button(
         "↓ Markdown report",

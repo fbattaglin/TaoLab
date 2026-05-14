@@ -26,7 +26,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from tao_lab.methods.base import AnalysisResult, HTEResult, MetricResult
+from tao_lab.methods.base import AnalysisResult, BanditReplayResult, HTEResult, MetricResult
 
 
 Verdict = Literal["ship", "hold", "dont_ship"]
@@ -61,6 +61,7 @@ class PrescriptionNarration(BaseModel):
     next_steps_plain: List[str] = Field(default_factory=list)
     next_steps_technical: List[str] = Field(default_factory=list)
     hte_summary: Optional[TextPair] = None  # populated when HTE results exist
+    bandit_summary: Optional[TextPair] = None  # populated when MAB replay ran
 
 
 # ─────────────────────────── Public API ───────────────────────────
@@ -81,10 +82,13 @@ class Narrator:
 
 
 def build_prescription(
-    result: AnalysisResult, *, api_key: Optional[str] = None
+    result: AnalysisResult,
+    *,
+    api_key: Optional[str] = None,
+    bandit_replay: Optional[BanditReplayResult] = None,
 ) -> PrescriptionNarration:
     """Single source of truth for the prescription content."""
-    base = _template_prescription(result)
+    base = _template_prescription(result, bandit_replay=bandit_replay)
     api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
     if api_key:
         try:
@@ -105,7 +109,11 @@ class _PrimaryReadout:
     direction: Literal["up", "down", "flat"]
 
 
-def _template_prescription(result: AnalysisResult) -> PrescriptionNarration:
+def _template_prescription(
+    result: AnalysisResult,
+    *,
+    bandit_replay: Optional[BanditReplayResult] = None,
+) -> PrescriptionNarration:
     primary = _pick_primary_metric(result)
     verdict = _decide_verdict(result, primary)
     confidence, confidence_score = _decide_confidence(primary)
@@ -121,6 +129,10 @@ def _template_prescription(result: AnalysisResult) -> PrescriptionNarration:
     if result.hte is not None:
         hte_summary = _build_hte_narration(result.hte)
 
+    bandit_summary = None
+    if bandit_replay is not None:
+        bandit_summary = _build_bandit_narration(bandit_replay)
+
     return PrescriptionNarration(
         verdict=verdict,
         confidence=confidence,
@@ -133,6 +145,7 @@ def _template_prescription(result: AnalysisResult) -> PrescriptionNarration:
         next_steps_plain=next_plain,
         next_steps_technical=next_tech,
         hte_summary=hte_summary,
+        bandit_summary=bandit_summary,
     )
 
 
@@ -626,6 +639,40 @@ def _build_hte_narration(hte: HTEResult) -> TextPair:
     return TextPair(plain=plain, technical=technical)
 
 
+# ─────────────────────────── Bandit narration ───────────────────────────
+def _build_bandit_narration(br: BanditReplayResult) -> TextPair:
+    """Build voice-aware narration for the MAB regret simulation."""
+    period_word = "days" if br.mode == "daily" else "batches"
+
+    conv_text = (
+        f"{period_word[:-1]} {br.convergence_period}"
+        if br.convergence_period
+        else f"the end of the {br.n_periods} {period_word}"
+    )
+
+    plain = (
+        f"Your test ran for {br.n_periods} {period_word} with equal traffic "
+        f"to both groups. A smarter system would have gradually shifted "
+        f"{br.final_allocation:.0%} of traffic to the winning option by "
+        f"{conv_text}, wasting less time on the weaker option. That would "
+        f"have recovered roughly {br.regret_saved_pct:.0%} of the "
+        f"exploration cost — about {br.regret_saved:,.0f} units of "
+        f"{br.metric_name}."
+    )
+
+    technical = (
+        f"Thompson Sampling replay ({br.metric_type}, {br.mode} mode): "
+        f"{br.n_periods} periods, {br.n_observations:,} observations. "
+        f"Convergence to ≥75% allocation at period "
+        f"{br.convergence_period or 'N/A'}. "
+        f"Cumulative regret: AB = {br.regret_ab:,.1f}, "
+        f"TS = {br.regret_bandit:,.1f}. "
+        f"Δ = {br.regret_saved:,.1f} ({br.regret_saved_pct:.0%} reduction)."
+    )
+
+    return TextPair(plain=plain, technical=technical)
+
+
 # ─────────────────────────── LLM enhancement (optional) ───────────────────────────
 def _enrich_with_llm(
     base: PrescriptionNarration,
@@ -751,5 +798,9 @@ def render_markdown(p: PrescriptionNarration, *, voice: Literal["plain", "techni
     if p.hte_summary is not None:
         hte_text = p.hte_summary.plain if voice == "plain" else p.hte_summary.technical
         parts.extend(["", "### Who Benefits Most", hte_text])
+
+    if p.bandit_summary is not None:
+        bandit_text = p.bandit_summary.plain if voice == "plain" else p.bandit_summary.technical
+        parts.extend(["", "### Opportunity Cost Analysis", bandit_text])
 
     return "\n".join(parts)

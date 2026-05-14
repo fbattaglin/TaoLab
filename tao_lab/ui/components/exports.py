@@ -24,7 +24,7 @@ from tao_lab.interpret.narrator import (
     Verdict,
     render_markdown,
 )
-from tao_lab.methods.base import AnalysisResult
+from tao_lab.methods.base import AnalysisResult, BanditReplayResult
 
 # Resolve once at import time; falls back gracefully if the file is absent.
 _LOGO_PATH = Path(__file__).parent.parent / "static" / "tao_lab_logo.png"
@@ -54,6 +54,7 @@ def to_markdown(
     *,
     voice: str = "plain",
     business_question: str = "",
+    bandit_replay: Optional[BanditReplayResult] = None,
 ) -> str:
     body = render_markdown(narration, voice=voice)  # type: ignore[arg-type]
 
@@ -71,6 +72,24 @@ def to_markdown(
             f"[{m.ci_lower:.4g}, {m.ci_upper:.4g}] | {sig} |"
         )
 
+    # ── MAB Regret Simulation detail (when present) ──
+    bandit_block = []
+    if bandit_replay is not None:
+        br = bandit_replay
+        period_word = "days" if br.mode == "daily" else "batches"
+        conv_str = str(br.convergence_period) if br.convergence_period else "—"
+        bandit_block = [
+            "",
+            "## Opportunity Cost Analysis",
+            "",
+            f"- **Mode:** {br.mode} ({br.metric_type})",
+            f"- **Duration:** {br.n_periods} {period_word}, {br.n_observations:,} observations",
+            f"- **Regret reduction:** {br.regret_saved_pct:.0%} ({br.regret_saved:,.0f} units of {br.metric_name})",
+            f"- **Convergence:** {period_word[:-1]} {conv_str}",
+            f"- **Final allocation to winner:** {br.final_allocation:.0%}",
+            "",
+        ]
+
     config_block = [
         "",
         "## Reproducibility",
@@ -84,7 +103,11 @@ def to_markdown(
         "",
     ]
 
-    return body + "\n" + "\n".join(metric_rows) + "\n" + "\n".join(config_block)
+    parts = body + "\n" + "\n".join(metric_rows)
+    if bandit_block:
+        parts += "\n" + "\n".join(bandit_block)
+    parts += "\n" + "\n".join(config_block)
+    return parts
 
 
 # ─────────────────────────── PDF ───────────────────────────

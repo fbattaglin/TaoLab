@@ -18,7 +18,7 @@ import streamlit as st
 
 from tao_lab.diagnose.engine import DiagnosisReport
 from tao_lab.interpret.narrator import PrescriptionNarration
-from tao_lab.methods.base import AnalysisResult, ExperimentConfig
+from tao_lab.methods.base import AnalysisResult, BanditReplayResult, ExperimentConfig
 
 
 STEP_DATA = 1
@@ -61,6 +61,7 @@ class WizardState:
     narration: Optional[str] = None  # legacy markdown render, kept for back-compat
     prescription: Optional[PrescriptionNarration] = None
     method_visuals: list[Any] = field(default_factory=list)
+    bandit_replay: Optional[BanditReplayResult] = None  # MAB regret simulation
 
     # Cross-cutting (Phase B/C will use this — kept here for forward compat)
     voice: str = "plain"  # plain | technical
@@ -75,6 +76,7 @@ class WizardState:
         self.narration = None
         self.prescription = None
         self.method_visuals = []
+        self.bandit_replay = None
 
 
 _STATE_KEY = "tl_state"

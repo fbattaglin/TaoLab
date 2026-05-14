@@ -29,6 +29,44 @@ class HTEResult(BaseModel):
     ate_forest_ci: Tuple[float, float]
 
 
+# ── MAB Regret Simulation models ──
+
+class BanditReplayResult(BaseModel):
+    """Results from Thompson Sampling replay simulation on A/B test data.
+
+    Not a primary analysis — a post-hoc insight that quantifies the opportunity
+    cost of fixed (50/50) allocation vs adaptive Thompson Sampling.
+    """
+
+    # Summary
+    mode: str  # "daily" or "sequential"
+    n_periods: int  # days (daily) or batches (sequential)
+    n_observations: int
+    metric_name: str
+    metric_type: str  # "binary" or "continuous"
+    winner: str  # the winning arm's value (e.g., "treatment")
+
+    # Regret
+    cumulative_reward_ab: float
+    cumulative_reward_bandit: float
+    cumulative_reward_optimal: float
+    regret_ab: float  # optimal - ab
+    regret_bandit: float  # optimal - bandit
+    regret_saved: float  # regret_ab - regret_bandit
+    regret_saved_pct: float  # regret_saved / regret_ab (0–1, 0 if regret_ab ≈ 0)
+
+    # Convergence
+    convergence_period: Optional[int] = None  # first period where allocation ≥ 0.75
+    final_allocation: float  # final fraction to winner
+
+    # Per-period series (for charts)
+    period_labels: List[str]  # dates (daily) or "0–100" (sequential)
+    cumulative_ab: List[float]
+    cumulative_bandit: List[float]
+    cumulative_optimal: List[float]
+    allocation_to_winner: List[float]  # fraction allocated to winner per period
+
+
 class RatioMetric(BaseModel):
     name: str
     numerator_col: str

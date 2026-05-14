@@ -73,14 +73,43 @@ def _execute(s: wstate.WizardState) -> None:
                 f"{n_sig} significant"
             )
 
-        st.write(copy.step4_progress_narrate(voice))
-        prescription = build_prescription(result)
-
         st.write(copy.step4_progress_viz(voice))
         try:
             visuals = method.visualize(result)
         except Exception:  # noqa: BLE001
             visuals = []
+
+        # ── MAB Regret Simulation (A/B only, when signal exists) ──
+        bandit_result = None
+        if (
+            s.chosen_method == "A/B Test"
+            and result.metrics
+            and s.df.height >= 200
+        ):
+            bandit_metric = next(
+                (m for m in result.metrics
+                 if m.p_value is not None and m.p_value < 0.10),
+                None,
+            )
+            if bandit_metric:
+                st.write(copy.step4_progress_bandit(voice))
+                from tao_lab.methods.bandit_replay import simulate_bandit
+
+                ts_cols = _get_timestamp_cols(s)
+                bandit_result = simulate_bandit(
+                    df=s.df,
+                    timestamp_col=ts_cols[0]["col"] if ts_cols else None,
+                    assignment_col=s.config.assignment_col,
+                    metric_col=bandit_metric.metric_name,
+                    control_val=s.config.control_val,
+                    treatment_val=s.config.treatment_val,
+                    date_format=(
+                        ts_cols[0].get("date_format") if ts_cols else None
+                    ),
+                )
+
+        st.write(copy.step4_progress_narrate(voice))
+        prescription = build_prescription(result, bandit_replay=bandit_result)
 
         if voice == "plain":
             status.update(label="Analysis complete!", state="complete")
@@ -92,6 +121,7 @@ def _execute(s: wstate.WizardState) -> None:
     # Keep the legacy markdown narration for any back-compat call paths.
     s.narration = render_markdown(prescription, voice=s.voice)
     s.method_visuals = visuals
+    s.bandit_replay = bandit_result
 
 
 def _show_srm_result(result, voice: Voice) -> None:
@@ -113,6 +143,14 @@ def _show_srm_result(result, voice: Voice) -> None:
             st.write(
                 f"✓ {copy.step5_srm_pass(voice)} · p = {result.srm_p_value:.4g}"
             )
+
+
+def _get_timestamp_cols(s: wstate.WizardState):
+    """Get timestamp columns from the diagnosis signals, if available."""
+    if s.diagnosis and s.diagnosis.detected_signals:
+        ts = s.diagnosis.detected_signals.get("timestamp_cols", [])
+        return ts if ts else None
+    return None
 
 
 def _build_method(s: wstate.WizardState):

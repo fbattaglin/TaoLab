@@ -23,20 +23,24 @@ We don’t just run numbers; we guide you through a path of enlightenment:
 
 ## 🧠 Smart Under the Hood
 
-Tao Lab isn't just a pretty face. It’s a statistical powerhouse:
+Tao Lab isn't just a pretty face. It’s a statistical powerhouse built for SOTA (State-of-the-Art) experimentation:
 
--   🚀 **Polars-First**: Sub-millisecond data wrangling.
--   🎲 **Bayesian Engine**: Powered by **NumPyro (JAX)** for those who want probability statements instead of confusing p-values.
--   🔮 **Causal Inference**: Identification via **DoWhy** and estimation via **EconML (DML)**. For when you didn't randomise, but still want the truth.
--   📉 **Interrupted Time-Series**: Using **CausalPy** to see the counterfactual "what if" of your interventions.
+-   🚀 **Polars-First**: Sub-millisecond data wrangling. We cast and clean in Polars, converting to Pandas only at the boundary of external library calls.
+-   🎲 **Bayesian Engine**: Powered by **NumPyro (JAX)**. Get real posteriors, HDI (Highest Density Intervals), and ROPE (Region of Practical Equivalence) instead of binary p-value traps.
+-   🔮 **Causal Inference**: Identification via **DoWhy** and estimation via **EconML (LinearDML)**. For when you didn't randomise, but still want the truth.
+-   🎭 **HTE (Heterogeneous Treatment Effects)**: Don't just settle for the Average (ATE). We run **CausalForestDML** to detect which subgroups (CATE) are actually driving your lift.
+-   📉 **Interrupted Time-Series**: Using **CausalPy** to see the counterfactual "what if" of your interventions in longitudinal data.
+-   🎰 **Bandit Replay Simulator**: A post-hoc Thompson Sampling replay that quantifies the **Regret** of your fixed 50/50 allocation. See how much faster you could have converged.
+-   💰 **Decision Intelligence**: We map stats to business reality. **Expected Loss (Risk)** and **Expected Impact** calculations help you decide if the lift is worth the rollout.
 
 ---
 
 ## 💅 Aesthetics & DX
 
 -   **Premium Light Mode**: A forced, high-contrast aesthetic that stays beautiful even if your OS is having a dark-mode identity crisis.
--   **React + Tailwind**: Custom-built UI components (Stepper, Verdict Banner, Prescription Card) that live in perfect harmony with Streamlit.
+-   **React + Tailwind**: Custom-built UI components (Stepper, Verdict Banner, Prescription Card, Data Health Score) that live in perfect harmony with Streamlit.
 -   **uv Magic**: Built for the future of Python package management. Zero dependency hell.
+-   **Intelligent Diagnosis**: Our **Phase D Engine** automatically scores your data against multiple methods, suggesting the right statistical path before you even click "Run".
 
 ---
 

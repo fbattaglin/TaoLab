@@ -15,14 +15,24 @@ Analysis methods implement the `tao_lab.methods.base.Method` interface. Total de
 - **`visualize()`**: Plotly-native visualisations.
 
 ### 3. Statistical Engines
-- **Frequentist A/B**: Welch's T-Test + **Delta Method** for ratios.
-- **Bayesian A/B**: **NumPyro (JAX)** MCMC. Posteriors, 95% HDI, and ROPE.
-- **Time-Series Intervention**: **CausalPy** counterfactual estimation.
-- **Observational Causal Inference**: **DoWhy** + **EconML (Double ML)**.
+- **Frequentist A/B**: Welch's T-Test + **Delta Method** (Taylor expansion) for ratio metrics.
+- **Bayesian A/B**: **NumPyro (JAX)** MCMC. Full posterior extraction with 95% HDI and ROPE analysis.
+- **Time-Series Intervention**: **CausalPy** counterfactual estimation for longitudinal data.
+- **Observational Causal Inference**: **DoWhy** (Identification) + **EconML** (Estimation via Double Machine Learning / LinearDML).
+- **HTE (Heterogeneous Treatment Effects)**: Individual-level effect estimation using **CausalForestDML** (CATE). Includes feature importance analysis and subgroup discovery.
 
-### 4. Statistical Guardrails (Non-negotiables)
-- **SRM Check**: Chi-square (p < 0.001) is mandatory.
-- **FDR Correction**: Benjamini-Hochberg applied automatically to multiple KPIs.
+### 4. Decision Intelligence (Phase E)
+- **Bayesian Risk**: Calculation of **Expected Loss** (the monetary risk of choosing the wrong variant).
+- **Monetary Impact**: Automatic projection of absolute lift to business value using `business_unit_value` and `audience_size` parameters.
+- **MAB Simulation**: Post-hoc Thompson Sampling replay on A/B data to quantify **Cumulative Regret** and optimal allocation trajectory.
+
+### 5. Intelligent Diagnosis (Phase D)
+- **Heuristic Scoring**: Multi-axis evaluation (cardinality, balance, variance stability, outlier risk) to recommend the optimal statistical method.
+- **Data Health Score**: Composite metric (0-100) based on sample size, group balance, missingness, and variance (CV).
+
+### 6. Statistical Guardrails (Non-negotiables)
+- **SRM Check**: Chi-square (p < 0.001) validation of randomisation.
+- **FDR Correction**: Benjamini-Hochberg (BH) adjustment for multiple testing across primary and secondary KPIs.
 
 ## 🛠️ Infrastructure & DX
 

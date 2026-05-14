@@ -195,6 +195,10 @@ class _Copy:
         plain="Finding which groups respond differently...",
         technical="Fitting CausalForestDML for heterogeneous effects...",
     )
+    step4_progress_bandit = CopyPair(
+        plain="Comparing against dynamic allocation...",
+        technical="Running Thompson Sampling replay simulation...",
+    )
 
     # Step 5 — Prescription
     step5_srm_pass = CopyPair(
@@ -299,6 +303,79 @@ class _Copy:
             "CIs are averaged within each segment. Arrows flag segments "
             "deviating >10% from the population ATE."
         ),
+    )
+
+    # Step 5 — MAB Regret Simulator
+    step5_bandit_title = CopyPair(
+        plain="Could smarter traffic allocation have saved time?",
+        technical="Opportunity Cost Analysis (Thompson Sampling Replay)",
+    )
+    step5_bandit_intro = CopyPair(
+        plain=(
+            "In your test, you split traffic equally — 50% to each option — for the "
+            "entire duration. An alternative approach called <em>dynamic allocation</em> "
+            "gradually sends more traffic to the option that's performing better, "
+            "so you waste less time on a losing option. Here's what that would have "
+            "looked like with your data."
+        ),
+        technical=(
+            "Standard A/B tests use fixed allocation (typically 50/50). Thompson Sampling "
+            "adaptively reallocates traffic based on accumulating posterior evidence, "
+            "reducing cumulative regret. Below: a replay simulation using your observed data."
+        ),
+    )
+    step5_bandit_reward_title = CopyPair(
+        plain="Cumulative results over time",
+        technical="Cumulative reward: AB vs Thompson Sampling",
+    )
+    step5_bandit_reward_caption = CopyPair(
+        plain=(
+            "The gap between the lines shows how much faster a smart allocation "
+            "captures value. The dashed green line is the theoretical best "
+            "(all traffic to the winner)."
+        ),
+        technical=(
+            "Cumulative reward under fixed (50/50) vs adaptive (TS) allocation. "
+            "Oracle = all traffic to ex-post winner."
+        ),
+    )
+    step5_bandit_alloc_title = CopyPair(
+        plain="How traffic would have shifted",
+        technical="Allocation trajectory to winning arm",
+    )
+    step5_bandit_alloc_caption = CopyPair(
+        plain=(
+            "A dynamic system starts at 50/50 and gradually sends more users to the "
+            "winner as evidence builds. The dashed line shows the equal split your test used."
+        ),
+        technical=(
+            "Thompson Sampling allocation fraction. "
+            "Dashed line = 50% (fixed AB baseline). Convergence defined at ≥75%."
+        ),
+    )
+    step5_bandit_duration_label = CopyPair(
+        plain="Test duration",
+        technical="Periods",
+    )
+    step5_bandit_duration_help = CopyPair(
+        plain="How long the test ran",
+        technical="",
+    )
+    step5_bandit_saved_label = CopyPair(
+        plain="Exploration cost recovered",
+        technical="Regret reduction",
+    )
+    step5_bandit_saved_help = CopyPair(
+        plain="How much of the wasted traffic a smarter system would have recovered",
+        technical="",
+    )
+    step5_bandit_convergence_label = CopyPair(
+        plain="Would converge by",
+        technical="Convergence (≥75%)",
+    )
+    step5_bandit_convergence_help = CopyPair(
+        plain="When the system would start sending most traffic to the winner",
+        technical="",
     )
 
 

@@ -17,11 +17,14 @@ uv run streamlit run tao_lab/ui/app.py
 # Generate canonical test datasets
 uv run scripts/fetch_datasets.py
 
-# Run validation tests (run individually, not as a suite)
+# Run validation tests (run individually, not as a suite — JAX/NumPyro
+# initialise global GPU state that leaks between tests in the same process)
 uv run python3 tests/test_final_mvp.py          # Frequentist A/B + ratio metrics
 uv run python3 tests/test_phase2_bayesian.py    # Bayesian MCMC inference
 uv run python3 tests/test_phase2_timeseries.py  # Interrupted time-series
 uv run python3 tests/test_phase3_causal.py      # Causal inference (DoWhy/EconML)
+uv run python3 tests/test_causal_hte.py         # HTE (CausalForestDML subgroups)
+uv run python3 tests/test_bandit_replay.py      # MAB Regret Simulator (Thompson Sampling replay)
 ```
 
 ### React Frontend (custom Streamlit components)
@@ -136,14 +139,33 @@ if ts != prev_ts:
 return None  # stale — ignore
 ```
 
+### Prescription Model (`tao_lab/interpret/narrator.py`)
+
+`PrescriptionNarration` is the canonical structured output that drives Step 5:
+- **Rule-driven fields**: `verdict` ("ship"/"hold"/"dont_ship"), `confidence`, `confidence_score`, `headline`, `caveats`, `next_steps_plain`, `next_steps_technical` — deterministic, based on p-values and effect size thresholds.
+- **Optional LLM-enhanced fields**: `diagnosis`, `recommendation` — enriched via Claude API if `ANTHROPIC_API_KEY` is set; template fallback otherwise.
+- **HTE field**: `hte_summary: Optional[TextPair]` — populated only when `result.hte` is not None.
+- **Bandit field**: `bandit_summary: Optional[TextPair]` — populated when MAB replay simulation ran successfully.
+
+`build_prescription(result, *, bandit_replay=None)` is the single entry point. Template-first strategy: all fields are always populated deterministically, so air-gapped/offline paths work. LLM can only rewrite `diagnosis` and `recommendation` — verdict and caveats remain rule-driven.
+
+### Export Formats (`tao_lab/ui/components/exports.py`)
+
+Three formats, all invoked from Step 5:
+- **Markdown** (`to_markdown(...)`) — narrative + metrics table + YAML config block + HTE section when present
+- **PDF** (`to_pdf_bytes(...)`) — single-page A4 via WeasyPrint (optional `[report]` extra); returns `None` if WeasyPrint not installed
+- **YAML** (`to_yaml_config(...)`) — config snapshot for reproducibility
+
+`tao_lab/report/generator.py` exists but is a legacy wrapper — `exports.py` is the canonical export path.
+
 ### Statistical Methods
 
-| Module | Class | Engine |
-|--------|-------|--------|
-| `methods/ab_test.py` | `FrequentistABTest` | Welch's T-Test + Delta Method for ratios |
-| `methods/bayesian_ab.py` | Bayesian A/B | NumPyro (JAX) MCMC, HDI, ROPE |
-| `methods/time_series.py` | Interrupted TS | CausalPy counterfactual estimation |
-| `methods/causal_inference.py` | Observational Causal | DoWhy (identification) + EconML DML (estimation) |
+| Module | Class | Engine | Maturity |
+|--------|-------|--------|----------|
+| `methods/ab_test.py` | `FrequentistABTest` | Welch's T-Test + Delta Method for ratios | Production |
+| `methods/bayesian_ab.py` | Bayesian A/B | NumPyro (JAX) MCMC, HDI, ROPE | Production |
+| `methods/time_series.py` | Interrupted TS | CausalPy counterfactual estimation | **Stub** — see Known Limitations |
+| `methods/causal_inference.py` | Observational Causal | DoWhy (identification) + EconML DML (estimation) | Production |
 
 ### Heterogeneous Treatment Effects (HTE)
 
@@ -157,11 +179,27 @@ HTE is an optional mode within Causal Inference, not a separate method. When ena
 
 **Architecture:** LinearDML provides ATE (more efficient, lower variance). CausalForestDML provides CATE (heterogeneity detection). Both run independently; ATE is reported from LinearDML, CATE from the forest. Effect modifiers (X) default to confounders (W) but can be customized in technical mode.
 
+### MAB Regret Simulator (`tao_lab/methods/bandit_replay.py`)
+
+Not a Method subclass — a **post-hoc insight** that appears in Step 5 for A/B tests when sufficient signal exists. Compares fixed 50/50 allocation against adaptive Thompson Sampling using the observed data.
+
+**Activation conditions** (all required): A/B Test method, ≥200 observations, at least one metric with p < 0.10 (relaxed threshold — bandit needs some signal to converge), and ≥7 periods after aggregation.
+
+**Two modes:**
+- **Daily** (with timestamps): aggregates by day, x-axis = dates
+- **Sequential** (no timestamps): shuffles data with fixed seed, chunks into batches of ~100, x-axis = "Users processed"
+
+**Architecture:** `_prepare_daily_aggregates()` and `_prepare_sequential_batches()` both return `List[PeriodStats]`, so `_run_thompson_sampling()` is mode-agnostic. Posteriors: Beta-Binomial (binary metrics, MC sampling), Normal-Normal (continuous, analytical Φ formula).
+
+**Key model:** `BanditReplayResult` in `base.py`. Stored on `WizardState.bandit_replay`. Step 5 renders a didactic section with two Plotly charts (cumulative reward + allocation trajectory) and key numbers (duration, regret reduction, convergence).
+
+**Narration:** `_build_bandit_narration()` in `narrator.py` produces a `TextPair` with plain/technical descriptions. Plain mode explains the concept; technical mode reports numbers (mode, metric_type, cumulative regret delta).
+
 ## Implementation Rules
 
 1. **Polars First**: All internal transformations use `polars`. Convert to `pandas` only at the boundary of external libraries (`statsmodels`, `econml`, `causalpy`). **Cast columns in Polars before `to_pandas()`** — PyArrow-backed extension types produced by `to_pandas()` can break standard Pandas reductions (`.mean()`, `.std()`) on float or string columns.
 2. **Lazy Imports**: Heavy libraries (NumPyro, JAX, CausalPy, DoWhy) must be imported *inside* `fit()` or `visualize()` — never at module level — to keep the Streamlit UI responsive.
-3. **Mandatory SRM**: Every `Method` runner must execute `tao_lab.checks.srm` before returning results (p < 0.001 threshold).
+3. **Mandatory SRM**: Every `Method` runner must execute `tao_lab.checks.srm` before returning results (p < 0.001 threshold). Exception: observational methods (Causal Inference) and Time-Series set `srm_p_value=1.0, srm_detected=False` because they have no randomisation to validate — add a code comment when doing this.
 4. **Structured Results**: Use the existing Pydantic models for all result objects; do not return raw dicts.
 5. **Config hints flow downstream**: `MethodCandidate.config_hint` is the contract between the diagnosis engine and the configure step. Keys like `timestamp_col`, `date_format`, `assignment_col`, `metric_cols`, `covariates` must be set correctly in each `_score_*()` function so Step 3 pre-populates correctly without requiring user re-entry.
 6. **Voice threading**: Every UI component that renders user-visible text accepts a `voice: Voice` parameter and uses `copy.<key>(voice)` for labels. Never hard-code English strings that a business user would read — add a `CopyPair` instead.
@@ -182,11 +220,29 @@ HTE is an optional mode within Causal Inference, not a separate method. When ena
 | `business_question` | `Optional[str]` | Free-form question entered on Step 1; included in Markdown and PDF exports |
 | `selected_candidate_idx` | `int` | Which ranked method candidate the user chose (not always rank-0) |
 | `engine` | `str` | `"Frequentist"` or `"Bayesian (NumPyro)"` for A/B tests |
+| `prescription` | `Optional[PrescriptionNarration]` | Structured narration output from `build_prescription()`; drives Step 5 rendering |
 | `method_visuals` | `List[go.Figure]` | Plotly figures from `Method.visualize()`, shown in the method-diagnostics expander |
+| `bandit_replay` | `Optional[BanditReplayResult]` | MAB regret simulation result; drives the "Could smarter allocation..." section in Step 5 |
+| `dataset_hints` | `dict` | Populated when a sample chip is loaded; keys include `"intervention_date"`, `"intervention_label"` — used by Step 3 to pre-populate fields |
 
 ## Test Datasets
 
-Three canonical datasets in `datasets/`:
+Four canonical datasets in `datasets/`:
 - `ab_test_ecommerce.csv` — 10k users, Control/Treatment, revenue + CTR ratio metric
 - `causal_lalonde.csv` — Lalonde observational data for causal inference
+- `causal_401k.csv` — 401(k) participation data; age and income are known effect modifiers (used for HTE demonstrations)
 - `time_series_marketing.csv` — 180 days, intervention date 2023-04-15
+
+## Known Limitations
+
+These are documented so future contributors don't mistake stubs for production code:
+
+1. **Time-Series is a stub.** `time_series.py` imports CausalPy but doesn't use it — the model fitting block is `try: pass except: pass`. The counterfactual is `mean(pre)`, p-value is hardcoded `0.01`, CIs are `lift * 0.8 / 1.2`. Completing this module requires implementing CausalPy's `SyntheticControl` or `InterruptedTimeSeries` model and extracting real posterior intervals.
+
+2. **Ratio metric has no denominator-zero guard.** `_analyze_ratio()` in `ab_test.py` divides by `mu_y` without checking for zero or near-zero denominators. Edge cases (empty cohorts, very rare events) will produce `inf` or `nan`. Needs a guard and appropriate fallback.
+
+3. **Causal Inference `MetricResult` fields are incomplete.** `control_mean` and `treatment_mean` are set to `0.0`, `lift_relative` to `0.0`. The narrator and prescription rendering should not rely on these fields for Causal Inference results.
+
+4. **Propensity score overlap diagnostic trains on full data.** The `RandomForestClassifier` in `causal_inference.py` fits and predicts on the same dataset (no cross-validation), so the overlap plot is optimistically biased. The `LinearDML` estimator internally cross-fits, so ATE estimates are unaffected — only the diagnostic visualization is inflated.
+
+5. **`networkx==2.8.8` pin.** Exact version pin in `pyproject.toml`, likely a transitive dependency conflict between EconML/DoWhy/CausalML. Test removal periodically.

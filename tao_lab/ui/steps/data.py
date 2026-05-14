@@ -70,6 +70,22 @@ _SAMPLE_CHIPS = [
         ),
         "file": "causal_401k.csv",
     },
+    {
+        "key": "ab_bandit",
+        "label": "Bandit Replay Simulator",
+        "blurb_plain": "A clear winner emerged early. How much traffic did the 50/50 split waste?",
+        "blurb_technical": "45 days · 27k rows · strong signal (p<0.01) · perfect for Thompson Sampling replay",
+        "scenario": "You ran an A/B test for 45 days. The treatment was clearly better. Could dynamic allocation have saved time and conversions?",
+        "file": "ab_test_bandit.csv",
+    },
+    {
+        "key": "causal_hte",
+        "label": "Pricing Promo (HTE)",
+        "blurb_plain": "The overall promo effect looks flat, but did it work for loyal customers?",
+        "blurb_technical": "12k rows · ATE ≈ 0 · strong CATE on tenure_months · CausalForestDML showcase",
+        "scenario": "A 20% discount promo was given to a mix of users. Overall revenue didn't budge. Who actually benefited?",
+        "file": "causal_pricing_hte.csv",
+    },
 ]
 
 
@@ -138,8 +154,8 @@ def _render_hero(s: wstate.WizardState, *, voice: Voice) -> None:
             unsafe_allow_html=True,
         )
 
-        # Render chips as a 2×2 grid so 4 entries don't get too narrow
-        for row_chips in [_SAMPLE_CHIPS[:2], _SAMPLE_CHIPS[2:]]:
+        # Render chips as a 3×2 grid so 6 entries don't get too narrow
+        for row_chips in [_SAMPLE_CHIPS[:2], _SAMPLE_CHIPS[2:4], _SAMPLE_CHIPS[4:]]:
             chip_cols = st.columns(len(row_chips), gap="small")
             for slot, chip in zip(chip_cols, row_chips):
                 blurb = chip["blurb_plain"] if voice == "plain" else chip["blurb_technical"]

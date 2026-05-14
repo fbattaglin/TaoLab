@@ -45,3 +45,9 @@ datasets/*.csv
 !datasets/ab_test_ecommerce.csv
 !datasets/causal_lalonde.csv
 !datasets/time_series_marketing.csv
+!datasets/ab_test_saas.csv
+!datasets/ab_test_email.csv
+!datasets/time_series_weekly.csv
+!datasets/causal_401k.csv
+!datasets/ab_test_bandit.csv
+!datasets/causal_pricing_hte.csv

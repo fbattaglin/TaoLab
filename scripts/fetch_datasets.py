@@ -236,8 +236,83 @@ def _fetch_401k_or_synthetic(seed: int = 2024) -> pl.DataFrame:
     })
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dataset 5 — Bandit Replay Showcase
+# ─────────────────────────────────────────────────────────────────────────────
+def _generate_ab_bandit(seed: int = 123) -> pl.DataFrame:
+    """A 45-day A/B test with 50/50 allocation and a clear, early winner.
+    Generates high regret under fixed allocation, perfect for demonstrating
+    the Thompson Sampling Replay Simulator.
+    """
+    rng = np.random.default_rng(seed)
+    n_days = 45
+    users_per_day = 600
+    
+    rows = []
+    for day_offset in range(n_days):
+        date = pd.Timestamp("2024-03-01") + pd.Timedelta(days=day_offset)
+        for _ in range(users_per_day):
+            variant = rng.choice(["control", "treatment"])
+            # Control: 8% conversion, Treatment: 12.5% conversion
+            p = 0.08 if variant == "control" else 0.125
+            converted = rng.binomial(1, p)
+            # Add continuous revenue as well
+            revenue = 0.0
+            if converted:
+                mu_rev = 45.0 if variant == "control" else 48.0
+                revenue = max(0, rng.normal(mu_rev, 15.0))
+                
+            rows.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "variant": variant,
+                "converted": converted,
+                "revenue": round(revenue, 2)
+            })
+    return pl.DataFrame(rows)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dataset 6 — Pricing Promo (HTE Discovery)
+# ─────────────────────────────────────────────────────────────────────────────
+def _generate_causal_hte(seed: int = 456) -> pl.DataFrame:
+    """Observational pricing promotion data. The Average Treatment Effect (ATE)
+    is near zero, but Heterogeneous Treatment Effects (HTE) exist: 
+    high-tenure customers spend significantly more, while low-tenure just
+    cannibalize margins. Perfect for CausalForestDML.
+    """
+    rng = np.random.default_rng(seed)
+    n = 12_000
+    
+    # Covariates
+    tenure_months = rng.integers(1, 48, size=n)
+    past_purchases = rng.lognormal(mean=1.5, sigma=0.8, size=n).astype(int)
+    age = rng.integers(18, 65, size=n)
+    
+    # Treatment assignment (observational: older, loyal customers more likely to get promo)
+    logit_p = -1.5 + 0.05 * tenure_months + 0.01 * age
+    prob = 1.0 / (1.0 + np.exp(-logit_p))
+    promo_applied = rng.binomial(1, prob, size=n)
+    
+    # Treatment effect (CATE):
+    # - Negative for low tenure (margin cannibalization)
+    # - Highly positive for high tenure (>24 months) and high past purchases
+    cate = -15.0 + 1.2 * tenure_months + 0.5 * past_purchases
+    
+    # Outcome: base spend + treatment effect + noise
+    base_spend = 50.0 + 2.0 * past_purchases + 0.5 * age
+    spend_90d = base_spend + promo_applied * cate + rng.normal(0, 20.0, size=n)
+    
+    return pl.DataFrame({
+        "promo_applied": promo_applied.tolist(),
+        "spend_90d": np.maximum(0, spend_90d).round(2).tolist(),
+        "tenure_months": tenure_months.tolist(),
+        "past_purchases": past_purchases.tolist(),
+        "age": age.tolist(),
+    })
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Entry point
+
 # ─────────────────────────────────────────────────────────────────────────────
 def generate_datasets() -> None:
     os.makedirs(_OUT, exist_ok=True)
@@ -262,6 +337,18 @@ def generate_datasets() -> None:
             _generate_time_series_weekly,
             "time_series_weekly.csv",
             "Timestamp='week_starting', Metric='weekly_revenue', Intervention='2023-01-02'",
+        ),
+        (
+            "Bandit Replay Showcase",
+            _generate_ab_bandit,
+            "ab_test_bandit.csv",
+            "Group='variant', Metric='converted', Date='date' — Run an A/B test and check Step 5.",
+        ),
+        (
+            "Pricing Promo (HTE Discovery)",
+            _generate_causal_hte,
+            "causal_pricing_hte.csv",
+            "Treatment='promo_applied', Outcome='spend_90d', Covariates='tenure_months' etc. — Use Causal Inference with HTE.",
         ),
     ]
 
@@ -293,7 +380,8 @@ def generate_datasets() -> None:
     print("\n🎉 All datasets ready in the 'datasets/' directory!")
     print("\nSummary:")
     for fname in ["ab_test_saas.csv", "ab_test_email.csv",
-                  "time_series_weekly.csv", "causal_401k.csv"]:
+                  "time_series_weekly.csv", "causal_401k.csv",
+                  "ab_test_bandit.csv", "causal_pricing_hte.csv"]:
         path = os.path.join(_OUT, fname)
         if os.path.exists(path):
             df = pl.read_csv(path)
